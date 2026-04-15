@@ -15,7 +15,7 @@ async function initDatabase() {
   });
 
   console.log(`Creando base de datos "${DB_NAME}"...`);
-  await conn.query(`CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
+  await conn.query(`CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8 COLLATE utf8_general_ci`);
   await conn.query(`USE \`${DB_NAME}\``);
 
   console.log('Creando tabla "devices"...');
@@ -25,9 +25,9 @@ async function initDatabase() {
       device_name VARCHAR(255) NOT NULL,
       endpoint TEXT NOT NULL,
       p256dh TEXT NOT NULL,
-      auth TEXT NOT NULL,
-      created_at DATETIME DEFAULT NOW(),
-      updated_at DATETIME DEFAULT NOW() ON UPDATE NOW()
+      auth VARCHAR(255) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NULL
     )
   `);
 
@@ -39,7 +39,7 @@ async function initDatabase() {
       latitude DOUBLE NOT NULL,
       longitude DOUBLE NOT NULL,
       accuracy DOUBLE,
-      timestamp DATETIME DEFAULT NOW(),
+      recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
     )
   `);
@@ -50,7 +50,7 @@ async function initDatabase() {
       id INT AUTO_INCREMENT PRIMARY KEY,
       device_id INT NOT NULL,
       status ENUM('pending', 'sent', 'received', 'failed') DEFAULT 'pending',
-      created_at DATETIME DEFAULT NOW(),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       responded_at DATETIME NULL,
       FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
     )

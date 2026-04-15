@@ -167,7 +167,7 @@ app.get('/api/locations/:deviceId', async (req, res) => {
   try {
     conn = await pool.getConnection();
     const locations = await conn.query(
-      'SELECT * FROM locations WHERE device_id = ? ORDER BY timestamp DESC LIMIT ?',
+      'SELECT * FROM locations WHERE device_id = ? ORDER BY recorded_at DESC LIMIT ?',
       [deviceId, limit]
     );
     res.json(locations);
@@ -187,7 +187,7 @@ app.get('/api/locations/:deviceId/latest', async (req, res) => {
   try {
     conn = await pool.getConnection();
     const locations = await conn.query(
-      'SELECT * FROM locations WHERE device_id = ? ORDER BY timestamp DESC LIMIT 1',
+      'SELECT * FROM locations WHERE device_id = ? ORDER BY recorded_at DESC LIMIT 1',
       [deviceId]
     );
     res.json(locations[0] || null);
@@ -207,11 +207,11 @@ app.get('/api/track-status/:requestId', async (req, res) => {
   try {
     conn = await pool.getConnection();
     const rows = await conn.query(
-      `SELECT tr.*, l.latitude, l.longitude, l.accuracy, l.timestamp as location_timestamp
+      `SELECT tr.*, l.latitude, l.longitude, l.accuracy, l.recorded_at as location_timestamp
        FROM tracking_requests tr
-       LEFT JOIN locations l ON l.device_id = tr.device_id AND l.timestamp >= tr.created_at
+       LEFT JOIN locations l ON l.device_id = tr.device_id AND l.recorded_at >= tr.created_at
        WHERE tr.id = ?
-       ORDER BY l.timestamp DESC LIMIT 1`,
+       ORDER BY l.recorded_at DESC LIMIT 1`,
       [requestId]
     );
     res.json(rows[0] || null);

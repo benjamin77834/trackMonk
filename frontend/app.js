@@ -226,7 +226,7 @@ async function viewHistory(targetDeviceId) {
     locations.forEach((loc) => {
       html += `
         <div class="history-item">
-          <span>${new Date(loc.timestamp).toLocaleString()}</span>
+          <span>${new Date(loc.recorded_at).toLocaleString()}</span>
           <span>${loc.latitude.toFixed(6)}, ${loc.longitude.toFixed(6)}</span>
           <a href="https://www.google.com/maps?q=${loc.latitude},${loc.longitude}" target="_blank">🗺️</a>
         </div>
