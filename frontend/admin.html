@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TrackMonk - Admin</title>
+  <meta name="theme-color" content="#e94560">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🐵 TrackMonk <span class="badge-admin">ADMIN</span></h1>
+      <div id="status" class="status status-info">Panel de administración</div>
+    </header>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('devices')">📱 Dispositivos</button>
+      <button class="tab" onclick="switchTab('map')">🗺️ Mapa</button>
+      <button class="tab" onclick="switchTab('search')">🔍 Buscar</button>
+    </div>
+
+    <!-- Tab: Dispositivos -->
+    <div id="tab-devices" class="tab-content active">
+      <div class="card tab-first-card">
+        <div class="card-header">
+          <h2>Dispositivos</h2>
+          <div style="display:flex;gap:0.4rem;">
+            <button onclick="trackAll()" class="btn btn-track" style="font-size:0.75rem;">📍 Trackear todos</button>
+            <button onclick="loadDevices()" class="btn btn-small">🔄</button>
+          </div>
+        </div>
+        <div id="devices-list"></div>
+      </div>
+    </div>
+
+    <!-- Tab: Mapa -->
+    <div id="tab-map" class="tab-content">
+      <div class="card tab-first-card">
+        <div class="card-header">
+          <h2>Mapa en vivo</h2>
+          <button onclick="loadAllOnMap()" class="btn btn-small">🔄</button>
+        </div>
+        <div id="map" style="height: 450px; border-radius: 8px;"></div>
+      </div>
+    </div>
+
+    <!-- Tab: Buscar -->
+    <div id="tab-search" class="tab-content">
+      <div class="card tab-first-card">
+        <h2>Buscar dispositivo</h2>
+        <div class="form-group">
+          <input type="text" id="search-input" placeholder="Nombre, teléfono, empresa o vehículo..." oninput="searchDevices()">
+        </div>
+        <div id="search-results"></div>
+      </div>
+    </div>
+
+    <!-- Panel de detalle -->
+    <div id="detail-panel" class="card" style="display: none;"></div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/config.js"></script>
+  <script src="/admin.js"></script>
+</body>
+</html>
