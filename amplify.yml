@@ -10,3 +10,8 @@ frontend:
       - '**/*'
   cache:
     paths: []
+  customHeaders:
+    - pattern: '**/*'
+      headers:
+        - key: 'Cache-Control'
+          value: 'no-cache'
