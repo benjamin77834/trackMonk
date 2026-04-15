@@ -3,29 +3,62 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Location Tracker</title>
+  <title>TrackMonk</title>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#e94560">
   <link rel="icon" href="/icons/icon-72.png">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
   <div class="container">
     <header>
-      <h1>📍 Location Tracker</h1>
+      <h1>🐵 TrackMonk</h1>
       <div id="status" class="status">Cargando...</div>
     </header>
+
+    <!-- Instalar PWA (iOS) -->
+    <section id="install-section" style="display: none;">
+      <div class="card">
+        <h2>📲 Instalar TrackMonk</h2>
+        <p>Para recibir notificaciones push en iPhone necesitas instalar la app:</p>
+        <ol class="install-steps">
+          <li>Toca el botón <strong>Compartir</strong> (📤) en Safari</li>
+          <li>Selecciona <strong>"Agregar a pantalla de inicio"</strong></li>
+          <li>Toca <strong>"Agregar"</strong></li>
+          <li>Abre TrackMonk desde tu pantalla de inicio</li>
+        </ol>
+        <p class="install-note">Si solo quieres ver el dashboard sin push, puedes continuar:</p>
+        <button onclick="showRegistration()" class="btn btn-primary">Continuar sin push</button>
+      </div>
+    </section>
 
     <!-- Registro -->
     <section id="registration-section" style="display: none;">
       <div class="card">
         <h2>Registrar dispositivo</h2>
-        <p>Ingresa un nombre para identificar este dispositivo.</p>
+        <p>Ingresa los datos para identificar este dispositivo.</p>
         <div class="form-group">
-          <label for="device-name">Nombre del dispositivo</label>
-          <input type="text" id="device-name" placeholder="Ej: Mi iPhone, Laptop oficina..." maxlength="100">
+          <label for="reg-device-name">Nombre del dispositivo</label>
+          <input type="text" id="reg-device-name" placeholder="Ej: Samsung Galaxy S24" maxlength="100">
         </div>
-        <button onclick="registerDevice()" class="btn btn-primary" id="register-btn">
+        <div class="form-group">
+          <label for="reg-person-name">Nombre de la persona</label>
+          <input type="text" id="reg-person-name" placeholder="Ej: Juan Pérez" maxlength="255">
+        </div>
+        <div class="form-group">
+          <label for="reg-phone">Número telefónico</label>
+          <input type="tel" id="reg-phone" placeholder="Ej: 5512345678" maxlength="50">
+        </div>
+        <div class="form-group">
+          <label for="reg-company">Empresa</label>
+          <input type="text" id="reg-company" placeholder="Ej: MonkeyPhone" maxlength="255">
+        </div>
+        <div class="form-group">
+          <label for="reg-vehicle">Vehículo</label>
+          <input type="text" id="reg-vehicle" placeholder="Ej: Nissan Versa Blanco ABC-123" maxlength="255">
+        </div>
+        <button onclick="registerDevice()" class="btn btn-primary">
           Registrar y activar tracking
         </button>
       </div>
@@ -33,18 +66,54 @@
 
     <!-- Dashboard -->
     <section id="dashboard-section" style="display: none;">
-      <div class="card">
-        <div class="card-header">
-          <h2>Dispositivos</h2>
-          <button onclick="loadDevices()" class="btn btn-small">🔄 Refrescar</button>
-        </div>
-        <div id="devices-list"></div>
+
+      <!-- Tabs -->
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('devices')">📱 Dispositivos</button>
+        <button class="tab" onclick="switchTab('map')">🗺️ Mapa</button>
+        <button class="tab" onclick="switchTab('search')">🔍 Buscar</button>
       </div>
 
-      <div id="map-container" class="card" style="display: none;"></div>
+      <!-- Tab: Dispositivos -->
+      <div id="tab-devices" class="tab-content active">
+        <div class="card">
+          <div class="card-header">
+            <h2>Dispositivos</h2>
+            <button onclick="loadDevices()" class="btn btn-small">🔄</button>
+          </div>
+          <div id="devices-list"></div>
+        </div>
+      </div>
+
+      <!-- Tab: Mapa -->
+      <div id="tab-map" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <h2>Mapa en vivo</h2>
+            <button onclick="loadAllOnMap()" class="btn btn-small">🔄</button>
+          </div>
+          <div id="map" style="height: 400px; border-radius: 8px;"></div>
+        </div>
+      </div>
+
+      <!-- Tab: Buscar -->
+      <div id="tab-search" class="tab-content">
+        <div class="card">
+          <h2>Buscar dispositivo</h2>
+          <div class="form-group">
+            <input type="text" id="search-input" placeholder="Nombre, teléfono, empresa o vehículo..." oninput="searchDevices()">
+          </div>
+          <div id="search-results"></div>
+        </div>
+      </div>
+
+      <!-- Panel de detalle / resultado -->
+      <div id="detail-panel" class="card" style="display: none;"></div>
+
     </section>
   </div>
 
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="/config.js"></script>
   <script src="/app.js"></script>
 </body>
