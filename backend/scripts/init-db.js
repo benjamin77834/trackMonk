@@ -26,8 +26,8 @@ async function initDatabase() {
       endpoint TEXT NOT NULL,
       p256dh TEXT NOT NULL,
       auth TEXT NOT NULL,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      created_at DATETIME DEFAULT NOW(),
+      updated_at DATETIME DEFAULT NOW() ON UPDATE NOW()
     )
   `);
 
@@ -39,7 +39,7 @@ async function initDatabase() {
       latitude DOUBLE NOT NULL,
       longitude DOUBLE NOT NULL,
       accuracy DOUBLE,
-      timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      timestamp DATETIME DEFAULT NOW(),
       FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
     )
   `);
@@ -50,8 +50,8 @@ async function initDatabase() {
       id INT AUTO_INCREMENT PRIMARY KEY,
       device_id INT NOT NULL,
       status ENUM('pending', 'sent', 'received', 'failed') DEFAULT 'pending',
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      responded_at TIMESTAMP NULL,
+      created_at DATETIME DEFAULT NOW(),
+      responded_at DATETIME NULL,
       FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE
     )
   `);
