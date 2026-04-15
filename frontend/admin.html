@@ -15,6 +15,20 @@
       <div id="status" class="status status-info">Panel de administración</div>
     </header>
 
+    <!-- Login -->
+    <section id="login-section">
+      <div class="card" style="text-align:center;">
+        <h2>🔒 Acceso Admin</h2>
+        <div class="form-group">
+          <input type="password" id="admin-password" placeholder="Contraseña" onkeydown="if(event.key==='Enter')adminLogin()">
+        </div>
+        <button onclick="adminLogin()" class="btn btn-primary">Entrar</button>
+      </div>
+    </section>
+
+    <!-- Dashboard (oculto hasta login) -->
+    <section id="dashboard-section" style="display:none;">
+
     <!-- Tabs -->
     <div class="tabs">
       <button class="tab active" onclick="switchTab('devices')">📱 Dispositivos</button>
@@ -60,6 +74,8 @@
 
     <!-- Panel de detalle -->
     <div id="detail-panel" class="card" style="display: none;"></div>
+
+    </section><!-- fin dashboard-section -->
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

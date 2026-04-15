@@ -1,11 +1,61 @@
 let leafletMap = null;
 let mapMarkers = [];
 let searchTimeout = null;
+let adminToken = sessionStorage.getItem('adminToken') || '';
+
+// ============ AUTH ============
+
+async function adminLogin() {
+  const password = document.getElementById('admin-password').value;
+  if (!password) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      adminToken = data.token;
+      sessionStorage.setItem('adminToken', adminToken);
+      showDashboard();
+      loadDevices();
+    } else {
+      updateStatus('Contraseña incorrecta', 'error');
+    }
+  } catch (err) {
+    updateStatus('Error de conexión', 'error');
+  }
+}
+
+function adminFetch(url, options = {}) {
+  options.headers = options.headers || {};
+  options.headers['x-admin-token'] = adminToken;
+  return fetch(url, options);
+}
+
+function showDashboard() {
+  document.getElementById('login-section').style.display = 'none';
+  document.getElementById('dashboard-section').style.display = 'block';
+}
 
 // ============ INIT ============
 
 function init() {
-  loadDevices();
+  if (adminToken) {
+    // Verificar que el token siga válido
+    adminFetch(`${API_BASE}/api/devices`).then(res => {
+      if (res.ok) {
+        showDashboard();
+        loadDevices();
+      } else {
+        sessionStorage.removeItem('adminToken');
+        adminToken = '';
+      }
+    }).catch(() => {});
+  }
 }
 
 // ============ TABS ============
@@ -26,7 +76,7 @@ function switchTab(tab) {
 
 async function loadDevices() {
   try {
-    const res = await fetch(`${API_BASE}/api/devices`);
+    const res = await adminFetch(`${API_BASE}/api/devices`);
     const devices = await res.json();
     const list = document.getElementById('devices-list');
     list.innerHTML = '';
@@ -62,7 +112,7 @@ async function loadDevices() {
 
 async function editDevice(id) {
   try {
-    const res = await fetch(`${API_BASE}/api/devices/${id}`);
+    const res = await adminFetch(`${API_BASE}/api/devices/${id}`);
     const d = await res.json();
     if (!d) return;
 
@@ -85,7 +135,7 @@ async function editDevice(id) {
 
 async function saveDevice(id) {
   try {
-    await fetch(`${API_BASE}/api/devices/${id}`, {
+    await adminFetch(`${API_BASE}/api/devices/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -109,7 +159,7 @@ async function saveDevice(id) {
 async function trackAll() {
   updateStatus('Enviando push a todos...');
   try {
-    const res = await fetch(`${API_BASE}/api/track-all`, { method: 'POST' });
+    const res = await adminFetch(`${API_BASE}/api/track-all`, { method: 'POST' });
     const data = await res.json();
     if (data.success) {
       updateStatus(`Push enviado: ${data.sent} OK, ${data.failed} fallidos de ${data.total}`, 'success');
@@ -125,7 +175,7 @@ async function trackAll() {
 async function trackDevice(id) {
   updateStatus('Enviando push...');
   try {
-    const res = await fetch(`${API_BASE}/api/track/${id}`, { method: 'POST' });
+    const res = await adminFetch(`${API_BASE}/api/track/${id}`, { method: 'POST' });
     const data = await res.json();
     if (data.success) {
       updateStatus('Push enviado. Esperando respuesta...', 'success');
@@ -143,7 +193,7 @@ async function pollStatus(requestId, deviceId) {
   const interval = setInterval(async () => {
     attempts++;
     try {
-      const res = await fetch(`${API_BASE}/api/track-status/${requestId}`);
+      const res = await adminFetch(`${API_BASE}/api/track-status/${requestId}`);
       const data = await res.json();
       if (data && data.status === 'received' && data.latitude) {
         clearInterval(interval);
@@ -151,7 +201,7 @@ async function pollStatus(requestId, deviceId) {
         showSingleOnMap(data.latitude, data.longitude, data.accuracy);
       } else if (attempts >= 30) {
         clearInterval(interval);
-        const locRes = await fetch(`${API_BASE}/api/locations/${deviceId}/latest`);
+        const locRes = await adminFetch(`${API_BASE}/api/locations/${deviceId}/latest`);
         const loc = await locRes.json();
         if (loc && loc.latitude) {
           updateStatus('Mostrando última ubicación conocida', 'warning');
@@ -182,7 +232,7 @@ function clearMarkers() {
 async function loadAllOnMap() {
   initMap();
   try {
-    const res = await fetch(`${API_BASE}/api/locations-all/latest`);
+    const res = await adminFetch(`${API_BASE}/api/locations-all/latest`);
     const data = await res.json();
     clearMarkers();
 
@@ -218,8 +268,8 @@ async function viewOnMap(deviceId) {
     initMap();
     try {
       const [devRes, locRes] = await Promise.all([
-        fetch(`${API_BASE}/api/devices/${deviceId}`),
-        fetch(`${API_BASE}/api/locations/${deviceId}?limit=50`),
+        adminFetch(`${API_BASE}/api/devices/${deviceId}`),
+        adminFetch(`${API_BASE}/api/locations/${deviceId}?limit=50`),
       ]);
       const device = await devRes.json();
       const locations = await locRes.json();
@@ -287,7 +337,7 @@ function searchDevices() {
     if (!q) { results.innerHTML = ''; return; }
 
     try {
-      const res = await fetch(`${API_BASE}/api/devices/search?q=${encodeURIComponent(q)}`);
+      const res = await adminFetch(`${API_BASE}/api/devices/search?q=${encodeURIComponent(q)}`);
       const devices = await res.json();
       results.innerHTML = '';
 

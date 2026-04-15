@@ -3,8 +3,11 @@ const cors = require('cors');
 const webPush = require('web-push');
 const pool = require('./db');
 
+const crypto = require('crypto');
+
 const app = express();
 const PORT = process.env.PORT || 3001;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'TrackMonk2026';
 
 const VAPID_PUBLIC = process.env.VAPID_PUBLIC_KEY || 'BOo4F6f4rAON57Om4re4hwCvpObP8OKAgpMsPnpJQJHy2siXrnrUB7oAw5h3MnAZLmztiIdPbs9BbP07V5ymCIk';
 const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY || 'akPJeydoIlbCtMKbRyEhTOmb6MjJZP8NrFSYIgf1kXg';
@@ -12,8 +15,32 @@ const VAPID_EMAIL = process.env.VAPID_EMAIL || 'mailto:soporte@locationtracker.n
 
 webPush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC, VAPID_PRIVATE);
 
+// Tokens activos de admin (en memoria)
+const adminTokens = new Set();
+
 app.use(cors());
 app.use(express.json());
+
+// ============ AUTH ============
+
+app.post('/api/admin/login', (req, res) => {
+  const { password } = req.body;
+  if (password === ADMIN_PASSWORD) {
+    const token = crypto.randomBytes(32).toString('hex');
+    adminTokens.add(token);
+    res.json({ success: true, token });
+  } else {
+    res.status(401).json({ error: 'Contraseña incorrecta' });
+  }
+});
+
+function requireAdmin(req, res, next) {
+  const token = req.headers['x-admin-token'];
+  if (token && adminTokens.has(token)) {
+    return next();
+  }
+  res.status(401).json({ error: 'No autorizado' });
+}
 
 // ============ VAPID ============
 
@@ -87,7 +114,7 @@ app.put('/api/devices/:deviceId', async (req, res) => {
 });
 
 // Listar dispositivos (con campos nuevos)
-app.get('/api/devices', async (req, res) => {
+app.get('/api/devices', requireAdmin, async (req, res) => {
   let conn;
   try {
     conn = await pool.getConnection();
@@ -104,7 +131,7 @@ app.get('/api/devices', async (req, res) => {
 });
 
 // Buscar dispositivos por nombre, teléfono o empresa
-app.get('/api/devices/search', async (req, res) => {
+app.get('/api/devices/search', requireAdmin, async (req, res) => {
   const { q } = req.query;
   if (!q) return res.json([]);
 
@@ -148,7 +175,7 @@ app.get('/api/devices/:deviceId', async (req, res) => {
 
 // ============ TRACKING ============
 
-app.post('/api/track/:deviceId', async (req, res) => {
+app.post('/api/track/:deviceId', requireAdmin, async (req, res) => {
   const { deviceId } = req.params;
   let conn;
   try {
@@ -176,7 +203,7 @@ app.post('/api/track/:deviceId', async (req, res) => {
   }
 });
 
-app.get('/api/track-status/:requestId', async (req, res) => {
+app.get('/api/track-status/:requestId', requireAdmin, async (req, res) => {
   const { requestId } = req.params;
   let conn;
   try {
@@ -221,7 +248,7 @@ app.post('/api/location', async (req, res) => {
   }
 });
 
-app.get('/api/locations/:deviceId', async (req, res) => {
+app.get('/api/locations/:deviceId', requireAdmin, async (req, res) => {
   const { deviceId } = req.params;
   const limit = parseInt(req.query.limit) || 50;
   let conn;
@@ -238,7 +265,7 @@ app.get('/api/locations/:deviceId', async (req, res) => {
   }
 });
 
-app.get('/api/locations/:deviceId/latest', async (req, res) => {
+app.get('/api/locations/:deviceId/latest', requireAdmin, async (req, res) => {
   const { deviceId } = req.params;
   let conn;
   try {
@@ -255,7 +282,7 @@ app.get('/api/locations/:deviceId/latest', async (req, res) => {
 });
 
 // Última ubicación de TODOS los dispositivos (para mapa general)
-app.get('/api/locations-all/latest', async (req, res) => {
+app.get('/api/locations-all/latest', requireAdmin, async (req, res) => {
   let conn;
   try {
     conn = await pool.getConnection();
@@ -277,7 +304,7 @@ app.get('/api/locations-all/latest', async (req, res) => {
 });
 
 // Trackear TODOS los dispositivos (campaña masiva)
-app.post('/api/track-all', async (req, res) => {
+app.post('/api/track-all', requireAdmin, async (req, res) => {
   let conn;
   try {
     conn = await pool.getConnection();
