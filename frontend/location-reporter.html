@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enviando ubicación...</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      display: flex; justify-content: center; align-items: center;
+      min-height: 100vh; margin: 0;
+      background: #1a1a2e; color: #eee;
+    }
+    .message { text-align: center; padding: 2rem; }
+  </style>
+</head>
+<body>
+  <div class="message">
+    <h2>📍 Obteniendo ubicación...</h2>
+    <p id="status">Por favor espera...</p>
+  </div>
+  <script src="/config.js"></script>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const requestId = params.get('requestId');
+    const deviceId = params.get('deviceId');
+
+    async function reportLocation() {
+      const statusEl = document.getElementById('status');
+      try {
+        const position = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true, timeout: 15000, maximumAge: 0,
+          });
+        });
+        statusEl.textContent = 'Enviando ubicación...';
+        await fetch(`${API_BASE}/api/location`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            deviceId,
+            requestId: requestId ? parseInt(requestId) : null,
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy,
+          }),
+        });
+        statusEl.textContent = 'Ubicación enviada ✓';
+        setTimeout(() => window.close(), 2000);
+      } catch (err) {
+        statusEl.textContent = 'Error: ' + err.message;
+      }
+    }
+    reportLocation();
+  </script>
+</body>
+</html>

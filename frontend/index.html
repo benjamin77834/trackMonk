@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Location Tracker</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#e94560">
+  <link rel="icon" href="/icons/icon-72.png">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>📍 Location Tracker</h1>
+      <div id="status" class="status">Cargando...</div>
+    </header>
+
+    <!-- Registro -->
+    <section id="registration-section" style="display: none;">
+      <div class="card">
+        <h2>Registrar dispositivo</h2>
+        <p>Ingresa un nombre para identificar este dispositivo.</p>
+        <div class="form-group">
+          <label for="device-name">Nombre del dispositivo</label>
+          <input type="text" id="device-name" placeholder="Ej: Mi iPhone, Laptop oficina..." maxlength="100">
+        </div>
+        <button onclick="registerDevice()" class="btn btn-primary" id="register-btn">
+          Registrar y activar tracking
+        </button>
+      </div>
+    </section>
+
+    <!-- Dashboard -->
+    <section id="dashboard-section" style="display: none;">
+      <div class="card">
+        <div class="card-header">
+          <h2>Dispositivos</h2>
+          <button onclick="loadDevices()" class="btn btn-small">🔄 Refrescar</button>
+        </div>
+        <div id="devices-list"></div>
+      </div>
+
+      <div id="map-container" class="card" style="display: none;"></div>
+    </section>
+  </div>
+
+  <script src="/config.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>
