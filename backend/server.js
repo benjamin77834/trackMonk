@@ -276,6 +276,43 @@ app.get('/api/locations-all/latest', async (req, res) => {
   }
 });
 
+// Trackear TODOS los dispositivos (campaña masiva)
+app.post('/api/track-all', async (req, res) => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const devices = await conn.query("SELECT * FROM devices WHERE endpoint != ''");
+
+    let sent = 0, failed = 0;
+
+    for (const device of devices) {
+      try {
+        const result = await conn.query('INSERT INTO tracking_requests (device_id, status) VALUES (?, ?)', [device.id, 'sent']);
+        const requestId = Number(result.insertId);
+
+        const pushSubscription = { endpoint: device.endpoint, keys: { p256dh: device.p256dh, auth: device.auth } };
+        const payload = JSON.stringify({
+          type: 'track-location', requestId,
+          title: 'Solicitud de ubicación', body: 'Se ha solicitado tu ubicación',
+        });
+
+        await webPush.sendNotification(pushSubscription, payload);
+        sent++;
+      } catch (err) {
+        console.error(`Error push device ${device.id}:`, err.statusCode || err.message);
+        failed++;
+      }
+    }
+
+    res.json({ success: true, sent, failed, total: devices.length });
+  } catch (err) {
+    console.error('Error en track-all:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  } finally {
+    if (conn) conn.release();
+  }
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Location Tracker API corriendo en puerto ${PORT}`);
 });

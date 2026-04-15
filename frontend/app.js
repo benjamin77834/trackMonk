@@ -289,6 +289,26 @@ async function saveDevice(id) {
 
 // ============ TRACKING ============
 
+async function trackAll() {
+  updateStatus('Enviando push a todos los dispositivos...');
+  try {
+    const res = await fetch(`${API_BASE}/api/track-all`, { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      updateStatus(`Push enviado a ${data.sent} dispositivos (${data.failed} fallidos). Esperando respuestas...`, 'success');
+      // Esperar unos segundos y cargar el mapa con las ubicaciones nuevas
+      setTimeout(() => {
+        switchTab('map');
+        setTimeout(() => loadAllOnMap(), 500);
+      }, 10000);
+    } else {
+      updateStatus('Error: ' + (data.error || 'desconocido'), 'error');
+    }
+  } catch (err) {
+    updateStatus('Error: ' + err.message, 'error');
+  }
+}
+
 async function trackDevice(targetDeviceId) {
   updateStatus('Enviando solicitud de ubicación...');
   try {

@@ -79,7 +79,10 @@
         <div class="card">
           <div class="card-header">
             <h2>Dispositivos</h2>
-            <button onclick="loadDevices()" class="btn btn-small">🔄</button>
+            <div style="display:flex;gap:0.4rem;">
+              <button onclick="trackAll()" class="btn btn-track" style="font-size:0.75rem;">📍 Trackear todos</button>
+              <button onclick="loadDevices()" class="btn btn-small">🔄</button>
+            </div>
           </div>
           <div id="devices-list"></div>
         </div>
