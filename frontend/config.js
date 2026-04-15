@@ -1,2 +1,2 @@
-// API a través del proxy de Amplify (rewrite /api/* -> EC2)
-const API_BASE = '';
+// API backend con HTTPS
+const API_BASE = 'https://api-tracker.monkeyfon.com';
