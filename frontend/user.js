@@ -296,6 +296,16 @@ async function getLocationAndSend(requestId, devId) {
 
 // ============ HELPERS ============
 
+function resetDevice() {
+  if (confirm('¿Seguro que quieres re-registrar este dispositivo?')) {
+    localStorage.clear();
+    deviceId = null;
+    caches.delete('app-data').catch(() => {});
+    showRegistration();
+    updateStatus('Registra tu dispositivo de nuevo');
+  }
+}
+
 function updateStatus(message, type = 'info') {
   const el = document.getElementById('status');
   el.textContent = message;
