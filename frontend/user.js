@@ -103,7 +103,22 @@ async function showRegistered() {
     }
   } catch (e) { /* ignore */ }
 
-  updateStatus('Dispositivo activo y listo', 'success');
+  // Verificar si tiene push activo
+  let hasPushActive = false;
+  if (hasPush && 'serviceWorker' in navigator) {
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      hasPushActive = !!sub;
+    } catch (e) { /* ignore */ }
+  }
+
+  const pushBtn = document.getElementById('activate-push-btn');
+  if (pushBtn) {
+    pushBtn.style.display = hasPushActive ? 'none' : 'block';
+  }
+
+  updateStatus(hasPushActive ? 'Dispositivo activo con push ✓' : 'Dispositivo activo (sin push)', hasPushActive ? 'success' : 'warning');
 }
 
 // ============ REGISTRO ============
@@ -182,6 +197,53 @@ async function registerDevice() {
     }
   } catch (err) {
     updateStatus('Error: ' + err.message, 'error');
+  }
+}
+
+// ============ ACTIVAR PUSH ============
+
+async function activatePush() {
+  updateStatus('Activando notificaciones...');
+  try {
+    if (!('serviceWorker' in navigator) || !hasPush) {
+      updateStatus('Tu navegador no soporta push. Instala la app como PWA.', 'error');
+      return;
+    }
+
+    const vapidRes = await fetch(`${API_BASE}/api/vapid-public-key`);
+    const { publicKey } = await vapidRes.json();
+
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      updateStatus('Necesitas permitir notificaciones', 'error');
+      return;
+    }
+
+    const registration = await navigator.serviceWorker.ready;
+    pushSubscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicKey),
+    });
+
+    // Actualizar la suscripción en el servidor
+    const sub = pushSubscription.toJSON();
+    await fetch(`${API_BASE}/api/devices/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        deviceName: 'update-push',
+        subscription: sub,
+      }),
+    });
+
+    // Actualizar el deviceId por si cambió
+    const res = await fetch(`${API_BASE}/api/devices/${deviceId}`);
+    
+    updateStatus('Push activado ✓', 'success');
+    const pushBtn = document.getElementById('activate-push-btn');
+    if (pushBtn) pushBtn.style.display = 'none';
+  } catch (err) {
+    updateStatus('Error activando push: ' + err.message, 'error');
   }
 }
 
