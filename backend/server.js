@@ -184,6 +184,11 @@ app.post('/api/track/:deviceId', requireAdmin, async (req, res) => {
     if (devices.length === 0) return res.status(404).json({ error: 'Dispositivo no encontrado' });
 
     const device = devices[0];
+
+    if (!device.endpoint || device.endpoint.length === 0) {
+      return res.status(400).json({ error: 'Este dispositivo no tiene push notifications activadas' });
+    }
+
     const result = await conn.query('INSERT INTO tracking_requests (device_id, status) VALUES (?, ?)', [deviceId, 'sent']);
     const requestId = Number(result.insertId);
 
@@ -308,7 +313,7 @@ app.post('/api/track-all', requireAdmin, async (req, res) => {
   let conn;
   try {
     conn = await pool.getConnection();
-    const devices = await conn.query("SELECT * FROM devices WHERE endpoint != ''");
+    const devices = await conn.query("SELECT * FROM devices WHERE endpoint != '' AND endpoint IS NOT NULL AND LENGTH(endpoint) > 0");
 
     let sent = 0, failed = 0;
 
