@@ -2,17 +2,38 @@ let deviceId = localStorage.getItem('deviceId');
 let pushSubscription = null;
 let hasPush = ('PushManager' in window);
 let isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+let deferredPrompt = null; // Para el prompt nativo de instalación en Android/Chrome
 
 function isIOS() {
   return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
+
+function isAndroid() {
+  return /Android/.test(navigator.userAgent);
+}
+
+function getPlatform() {
+  if (isIOS()) return 'ios';
+  if (isAndroid()) return 'android';
+  return 'desktop';
+}
+
+// Capturar el evento beforeinstallprompt (Chrome/Edge/Android)
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // Si estamos en la pantalla de instalación, mostrar el botón nativo
+  const nativeBtn = document.getElementById('install-native-btn');
+  if (nativeBtn) nativeBtn.style.display = 'block';
+});
 
 // ============ INIT ============
 
 async function init() {
   updateStatus('Inicializando...');
 
-  if (isIOS() && !isStandalone && !hasPush && !deviceId) {
+  // Mostrar instrucciones de instalación si no está instalada como PWA y no tiene push
+  if (!isStandalone && !hasPush && !deviceId) {
     showInstallPrompt();
     return;
   }
@@ -37,11 +58,28 @@ async function init() {
   }
 }
 
+async function nativeInstall() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const result = await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  if (result.outcome === 'accepted') {
+    updateStatus('App instalada. Ábrela desde tu pantalla de inicio.', 'success');
+  }
+}
+
 function showInstallPrompt() {
   document.getElementById('install-section').style.display = 'block';
   document.getElementById('registration-section').style.display = 'none';
   document.getElementById('registered-section').style.display = 'none';
-  updateStatus('Instala la app para continuar', 'warning');
+
+  // Mostrar instrucciones según plataforma
+  const platform = getPlatform();
+  document.querySelectorAll('.install-platform').forEach(el => el.style.display = 'none');
+  const platformEl = document.getElementById('install-' + platform);
+  if (platformEl) platformEl.style.display = 'block';
+
+  updateStatus('Instala la app para recibir notificaciones', 'warning');
 }
 
 function showRegistration() {
