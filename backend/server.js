@@ -92,6 +92,31 @@ app.post('/api/devices/register', async (req, res) => {
   }
 });
 
+// Actualizar push subscription de un dispositivo existente
+app.put('/api/devices/:deviceId/push', async (req, res) => {
+  const { deviceId } = req.params;
+  const { subscription } = req.body;
+
+  if (!subscription || !subscription.endpoint) {
+    return res.status(400).json({ error: 'subscription es requerida' });
+  }
+
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    await conn.query(
+      'UPDATE devices SET endpoint = ?, p256dh = ?, auth = ? WHERE id = ?',
+      [subscription.endpoint, subscription.keys.p256dh, subscription.keys.auth, deviceId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error actualizando push:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  } finally {
+    if (conn) conn.release();
+  }
+});
+
 // Actualizar perfil del dispositivo
 app.put('/api/devices/:deviceId', async (req, res) => {
   const { deviceId } = req.params;

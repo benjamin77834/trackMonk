@@ -225,20 +225,14 @@ async function activatePush() {
       applicationServerKey: urlBase64ToUint8Array(publicKey),
     });
 
-    // Actualizar la suscripción en el servidor
+    // Actualizar la suscripción en el dispositivo existente
     const sub = pushSubscription.toJSON();
-    await fetch(`${API_BASE}/api/devices/register`, {
-      method: 'POST',
+    await fetch(`${API_BASE}/api/devices/${deviceId}/push`, {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        deviceName: 'update-push',
-        subscription: sub,
-      }),
+      body: JSON.stringify({ subscription: sub }),
     });
 
-    // Actualizar el deviceId por si cambió
-    const res = await fetch(`${API_BASE}/api/devices/${deviceId}`);
-    
     updateStatus('Push activado ✓', 'success');
     const pushBtn = document.getElementById('activate-push-btn');
     if (pushBtn) pushBtn.style.display = 'none';
