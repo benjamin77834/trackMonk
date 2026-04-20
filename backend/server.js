@@ -278,6 +278,24 @@ app.post('/api/location', async (req, res) => {
   }
 });
 
+// Historial de ubicaciones de MI dispositivo (público, solo el propio)
+app.get('/api/my-locations/:deviceId', async (req, res) => {
+  const { deviceId } = req.params;
+  const limit = parseInt(req.query.limit) || 50;
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const locations = await conn.query(
+      'SELECT recorded_at, latitude, longitude, accuracy FROM locations WHERE device_id = ? ORDER BY recorded_at DESC LIMIT ?', [deviceId, limit]);
+    res.json(locations);
+  } catch (err) {
+    console.error('Error obteniendo ubicaciones:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  } finally {
+    if (conn) conn.release();
+  }
+});
+
 app.get('/api/locations/:deviceId', requireAdmin, async (req, res) => {
   const { deviceId } = req.params;
   const limit = parseInt(req.query.limit) || 50;

@@ -294,6 +294,53 @@ async function getLocationAndSend(requestId, devId) {
   }
 }
 
+// ============ MI HISTORIAL ============
+
+async function viewMyHistory() {
+  const container = document.getElementById('my-history');
+
+  if (container.style.display === 'block') {
+    container.style.display = 'none';
+    return;
+  }
+
+  container.style.display = 'block';
+  container.innerHTML = '<p style="color:#888; text-align:center;">Cargando...</p>';
+
+  try {
+    const res = await fetch(`${API_BASE}/api/my-locations/${deviceId}?limit=50`);
+    const locations = await res.json();
+
+    if (locations.length === 0) {
+      container.innerHTML = '<p style="color:#888; text-align:center;">Sin historial aún</p>';
+      return;
+    }
+
+    let html = '<h3 style="margin-bottom:0.5rem;">📋 Mi historial</h3>';
+    html += '<div class="history-list">';
+
+    locations.forEach((loc, i) => {
+      const date = new Date(loc.recorded_at);
+      const isLatest = i === 0;
+      html += `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:0.5rem 0; border-bottom:1px solid #1a1a4e; font-size:0.8rem; flex-wrap:wrap; gap:0.3rem; ${isLatest ? 'background:#1a3e1a; padding:0.5rem; border-radius:6px; margin-bottom:0.25rem;' : ''}">
+          <div>
+            <span style="color:${isLatest ? '#66cc66' : '#ccc'};">${isLatest ? '🔴 ÚLTIMA' : '📌'}</span>
+            <span>${date.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+            <span style="color:#888;">${date.toLocaleTimeString('es-MX')}</span>
+          </div>
+          <a href="https://www.google.com/maps?q=${loc.latitude},${loc.longitude}" target="_blank" style="text-decoration:none;">🗺️ Ver</a>
+        </div>
+      `;
+    });
+
+    html += '</div>';
+    container.innerHTML = html;
+  } catch (err) {
+    container.innerHTML = '<p style="color:#cc6666; text-align:center;">Error cargando historial</p>';
+  }
+}
+
 // ============ HELPERS ============
 
 function resetDevice() {
