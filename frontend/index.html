@@ -116,5 +116,39 @@
 
   <script src="/config.js"></script>
   <script src="/user.js"></script>
+
+  <!-- Banner de instalación (no intrusivo) -->
+  <div id="install-banner" style="display:none; position:fixed; bottom:0; left:0; right:0; background:#16213e; border-top:1px solid #1a1a4e; padding:0.75rem; text-align:center; z-index:100;">
+    <div style="max-width:600px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; gap:0.5rem;">
+      <div style="flex:1; text-align:left;">
+        <span style="font-size:0.85rem; color:#fff;">📲 Instala TrackMonk</span>
+        <span id="install-hint" style="font-size:0.75rem; color:#888; display:block;"></span>
+      </div>
+      <button id="install-native-banner-btn" onclick="nativeInstall()" style="display:none; padding:0.5rem 1rem; background:#e94560; color:#fff; border:none; border-radius:6px; font-weight:600; font-size:0.85rem; cursor:pointer;">Instalar</button>
+      <button onclick="document.getElementById('install-banner').style.display='none'" style="padding:0.3rem 0.6rem; background:transparent; color:#666; border:none; cursor:pointer; font-size:1.1rem;">✕</button>
+    </div>
+  </div>
+
+  <script>
+    // Mostrar hint según plataforma
+    (function() {
+      const hint = document.getElementById('install-hint');
+      const nativeBtn = document.getElementById('install-native-banner-btn');
+      if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+        hint.textContent = 'Safari → Compartir (📤) → Agregar a inicio';
+      } else if (/Android/.test(navigator.userAgent)) {
+        hint.textContent = 'Menú (⋮) → Instalar aplicación';
+      } else {
+        hint.textContent = 'Busca el ícono ⬇️ en la barra de direcciones';
+      }
+      // Si hay prompt nativo disponible, mostrar botón
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        window._deferredPrompt = e;
+        if (nativeBtn) nativeBtn.style.display = 'block';
+        if (hint) hint.textContent = 'Para mejor experiencia';
+      });
+    })();
+  </script>
 </body>
 </html>

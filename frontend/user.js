@@ -32,12 +32,6 @@ window.addEventListener('beforeinstallprompt', (e) => {
 async function init() {
   updateStatus('Inicializando...');
 
-  // Mostrar instrucciones de instalación si no está instalada como PWA y no tiene push
-  if (!isStandalone && !hasPush && !deviceId) {
-    showInstallPrompt();
-    return;
-  }
-
   if ('serviceWorker' in navigator) {
     try {
       const registration = await navigator.serviceWorker.register('/sw.js');
@@ -52,19 +46,36 @@ async function init() {
 
   if (deviceId) {
     showRegistered();
+    // Mostrar banner de instalación si no está instalada como PWA
+    if (!isStandalone) showInstallBanner();
   } else {
+    // Si es iOS sin PWA y sin push, mostrar instrucciones completas primero
+    if (isIOS() && !isStandalone && !hasPush) {
+      showInstallPrompt();
+      return;
+    }
     showRegistration();
     updateStatus('Registra tu dispositivo para comenzar');
+    // Mostrar banner de instalación
+    if (!isStandalone) showInstallBanner();
   }
 }
 
+function showInstallBanner() {
+  const banner = document.getElementById('install-banner');
+  if (banner) banner.style.display = 'block';
+}
+
 async function nativeInstall() {
-  if (!deferredPrompt) return;
-  deferredPrompt.prompt();
-  const result = await deferredPrompt.userChoice;
+  const prompt = deferredPrompt || window._deferredPrompt;
+  if (!prompt) return;
+  prompt.prompt();
+  const result = await prompt.userChoice;
   deferredPrompt = null;
+  window._deferredPrompt = null;
   if (result.outcome === 'accepted') {
-    updateStatus('App instalada. Ábrela desde tu pantalla de inicio.', 'success');
+    updateStatus('App instalada ✓', 'success');
+    document.getElementById('install-banner').style.display = 'none';
   }
 }
 
