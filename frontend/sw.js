@@ -10,6 +10,13 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(clients.claim());
 });
 
+self.addEventListener('fetch', (event) => {
+  // Pass through - required for PWA installability
+  event.respondWith(fetch(event.request).catch(() => {
+    return new Response('Offline', { status: 503 });
+  }));
+});
+
 self.addEventListener('push', (event) => {
   if (!event.data) return;
 
