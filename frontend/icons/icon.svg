@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="80" fill="#0f0f23"/>
+  <circle cx="256" cy="200" r="80" fill="#e94560"/>
+  <path d="M256 280 L256 380" stroke="#e94560" stroke-width="12"/>
+  <circle cx="256" cy="400" r="20" fill="#e94560"/>
+  <text x="256" y="180" text-anchor="middle" font-size="80" fill="white">🐵</text>
+</svg>
