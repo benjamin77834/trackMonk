@@ -11,10 +11,12 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Pass through - required for PWA installability
-  event.respondWith(fetch(event.request).catch(() => {
-    return new Response('Offline', { status: 503 });
-  }));
+  // Solo interceptar requests al mismo origen (no API calls)
+  if (event.request.url.startsWith(self.location.origin) && !event.request.url.includes('/api/')) {
+    event.respondWith(
+      fetch(event.request).catch(() => new Response('Offline', { status: 503 }))
+    );
+  }
 });
 
 self.addEventListener('push', (event) => {
