@@ -333,6 +333,41 @@ app.get('/api/locations-all/latest', requireAdmin, async (req, res) => {
   }
 });
 
+// Enviar mensaje push personalizado a un dispositivo
+app.post('/api/push-message/:deviceId', requireAdmin, async (req, res) => {
+  const { deviceId } = req.params;
+  const { title, body } = req.body;
+
+  if (!body) return res.status(400).json({ error: 'body es requerido' });
+
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const devices = await conn.query('SELECT * FROM devices WHERE id = ?', [deviceId]);
+    if (devices.length === 0) return res.status(404).json({ error: 'Dispositivo no encontrado' });
+
+    const device = devices[0];
+    if (!device.endpoint || device.endpoint.length === 0) {
+      return res.status(400).json({ error: 'Este dispositivo no tiene push activado' });
+    }
+
+    const pushSubscription = { endpoint: device.endpoint, keys: { p256dh: device.p256dh, auth: device.auth } };
+    const payload = JSON.stringify({
+      type: 'custom-message',
+      title: title || 'TrackMonk',
+      body: body,
+    });
+
+    await webPush.sendNotification(pushSubscription, payload);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error enviando mensaje:', err);
+    res.status(500).json({ error: 'Error enviando mensaje push' });
+  } finally {
+    if (conn) conn.release();
+  }
+});
+
 // Trackear TODOS los dispositivos (campaña masiva)
 app.post('/api/track-all', requireAdmin, async (req, res) => {
   let conn;

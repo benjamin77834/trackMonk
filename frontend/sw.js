@@ -28,6 +28,17 @@ self.addEventListener('push', (event) => {
 
     event.waitUntil(getAndSendLocation(data.requestId));
   }
+
+  if (data.type === 'custom-message') {
+    event.waitUntil(
+      self.registration.showNotification(data.title || 'TrackMonk', {
+        body: data.body || '',
+        icon: '/icons/icon-192.png',
+        badge: '/icons/icon-72.png',
+        tag: 'custom-message',
+      })
+    );
+  }
 });
 
 self.addEventListener('notificationclick', (event) => {

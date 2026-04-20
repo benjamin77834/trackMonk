@@ -83,6 +83,7 @@ async function loadDevices() {
         </div>
         <div class="device-actions">
           <button onclick="trackDevice(${d.id})" class="btn btn-track" title="Trackear">📍</button>
+          <button onclick="sendMessage(${d.id})" class="btn btn-track" title="Enviar mensaje" style="background:#1a73e8;">💬</button>
           <button onclick="viewOnMap(${d.id})" class="btn btn-history" title="Recorrido en mapa">🗺️</button>
           <button onclick="viewHistory(${d.id})" class="btn btn-small" title="Historial">📋</button>
           <button onclick="editDevice(${d.id})" class="btn btn-small" title="Editar">✏️</button>
@@ -154,6 +155,58 @@ async function viewHistory(deviceId) {
     panel.scrollIntoView({ behavior: 'smooth' });
   } catch (err) {
     updateStatus('Error cargando historial', 'error');
+  }
+}
+
+// ============ MENSAJE PERSONALIZADO ============
+
+async function sendMessage(deviceId) {
+  const panel = document.getElementById('detail-panel');
+  panel.style.display = 'block';
+
+  let deviceName = '';
+  try {
+    const res = await adminFetch(`${API_BASE}/api/devices/${deviceId}`);
+    const d = await res.json();
+    deviceName = d.person_name || d.device_name;
+  } catch (e) {}
+
+  panel.innerHTML = `
+    <h3>💬 Enviar mensaje a ${esc(deviceName)}</h3>
+    <div class="form-group">
+      <label>Título</label>
+      <input type="text" id="msg-title" placeholder="Ej: Aviso importante" value="TrackMonk">
+    </div>
+    <div class="form-group">
+      <label>Mensaje</label>
+      <input type="text" id="msg-body" placeholder="Ej: Por favor envía tu ubicación">
+    </div>
+    <button onclick="doSendMessage(${deviceId})" class="btn btn-primary" style="background:#1a73e8;">Enviar push</button>
+  `;
+  panel.scrollIntoView({ behavior: 'smooth' });
+}
+
+async function doSendMessage(deviceId) {
+  const title = document.getElementById('msg-title').value.trim() || 'TrackMonk';
+  const body = document.getElementById('msg-body').value.trim();
+  if (!body) { updateStatus('Escribe un mensaje', 'error'); return; }
+
+  updateStatus('Enviando mensaje...');
+  try {
+    const res = await adminFetch(`${API_BASE}/api/push-message/${deviceId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, body }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      updateStatus('Mensaje enviado ✓', 'success');
+      document.getElementById('detail-panel').style.display = 'none';
+    } else {
+      updateStatus('Error: ' + (data.error || ''), 'error');
+    }
+  } catch (err) {
+    updateStatus('Error: ' + err.message, 'error');
   }
 }
 
