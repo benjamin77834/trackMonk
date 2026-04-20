@@ -1,40 +1,32 @@
-// Service Worker - maneja push notifications y obtiene ubicación
-// Importa la config con la URL del API
-importScripts('/config.js');
+// Service Worker - TrackMonk
+var API_URL = '';
 
-self.addEventListener('install', (event) => {
+self.addEventListener('install', function(event) {
   self.skipWaiting();
 });
 
-self.addEventListener('activate', (event) => {
+self.addEventListener('activate', function(event) {
   event.waitUntil(clients.claim());
 });
 
-self.addEventListener('fetch', (event) => {
-  // Solo interceptar requests al mismo origen (no API calls)
-  if (event.request.url.startsWith(self.location.origin) && !event.request.url.includes('/api/')) {
-    event.respondWith(
-      fetch(event.request).catch(() => new Response('Offline', { status: 503 }))
-    );
-  }
+self.addEventListener('fetch', function(event) {
+  // Pass through all requests - required for PWA installability
 });
 
-self.addEventListener('push', (event) => {
+self.addEventListener('push', function(event) {
   if (!event.data) return;
 
-  const data = event.data.json();
+  var data = event.data.json();
 
   if (data.type === 'track-location') {
     event.waitUntil(
       self.registration.showNotification(data.title || 'Ubicación solicitada', {
         body: data.body || 'Obteniendo tu ubicación...',
         icon: '/icons/icon-192.png',
-        badge: '/icons/icon-72.png',
         tag: 'location-request',
         data: { requestId: data.requestId },
       })
     );
-
     event.waitUntil(getAndSendLocation(data.requestId));
   }
 
@@ -43,74 +35,64 @@ self.addEventListener('push', (event) => {
       self.registration.showNotification(data.title || 'TrackMonk', {
         body: data.body || '',
         icon: '/icons/icon-192.png',
-        badge: '/icons/icon-72.png',
         tag: 'custom-message',
       })
     );
   }
 });
 
-self.addEventListener('notificationclick', (event) => {
+self.addEventListener('notificationclick', function(event) {
   event.notification.close();
   event.waitUntil(
-    clients.matchAll({ type: 'window' }).then((clientList) => {
-      for (const client of clientList) {
-        if (client.url.includes(self.location.origin) && 'focus' in client) {
-          return client.focus();
-        }
+    clients.matchAll({ type: 'window' }).then(function(clientList) {
+      for (var i = 0; i < clientList.length; i++) {
+        if ('focus' in clientList[i]) return clientList[i].focus();
       }
       return clients.openWindow('/');
     })
   );
 });
 
-async function getAndSendLocation(requestId) {
-  try {
-    const deviceId = await getDeviceId();
-    if (!deviceId) {
-      console.error('No se encontró deviceId');
-      return;
-    }
-
-    const allClients = await clients.matchAll({ type: 'window' });
-
-    if (allClients.length > 0) {
-      allClients[0].postMessage({
-        type: 'get-location',
-        requestId,
-        deviceId,
-      });
-    } else {
-      await clients.openWindow(
-        '/location-reporter.html?requestId=' + requestId + '&deviceId=' + deviceId
-      );
-    }
-  } catch (err) {
-    console.error('Error obteniendo ubicación:', err);
-  }
+function getApiBase() {
+  return 'https://api-tracker.monkeyfon.com';
 }
 
-async function getDeviceId() {
-  const allClients = await clients.matchAll({ type: 'window' });
-  for (const client of allClients) {
-    return new Promise((resolve) => {
-      const channel = new MessageChannel();
-      channel.port1.onmessage = (event) => resolve(event.data.deviceId);
-      client.postMessage({ type: 'get-device-id' }, [channel.port2]);
-      setTimeout(() => resolve(null), 3000);
+function getAndSendLocation(requestId) {
+  return getDeviceId().then(function(deviceId) {
+    if (!deviceId) return;
+
+    return clients.matchAll({ type: 'window' }).then(function(allClients) {
+      if (allClients.length > 0) {
+        allClients[0].postMessage({
+          type: 'get-location',
+          requestId: requestId,
+          deviceId: deviceId,
+        });
+      } else {
+        return clients.openWindow(
+          '/location-reporter.html?requestId=' + requestId + '&deviceId=' + deviceId
+        );
+      }
     });
-  }
+  });
+}
 
-  try {
-    const cache = await caches.open('app-data');
-    const response = await cache.match('/device-id');
-    if (response) {
-      const data = await response.json();
-      return data.deviceId;
+function getDeviceId() {
+  return clients.matchAll({ type: 'window' }).then(function(allClients) {
+    if (allClients.length > 0) {
+      return new Promise(function(resolve) {
+        var channel = new MessageChannel();
+        channel.port1.onmessage = function(event) { resolve(event.data.deviceId); };
+        allClients[0].postMessage({ type: 'get-device-id' }, [channel.port2]);
+        setTimeout(function() { resolve(null); }, 3000);
+      });
     }
-  } catch (e) {
-    // ignore
-  }
 
-  return null;
+    return caches.open('app-data').then(function(cache) {
+      return cache.match('/device-id').then(function(response) {
+        if (response) return response.json().then(function(data) { return data.deviceId; });
+        return null;
+      });
+    }).catch(function() { return null; });
+  });
 }
