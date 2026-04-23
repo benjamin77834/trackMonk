@@ -80,17 +80,18 @@ async function nativeInstall() {
 }
 
 function showInstallPrompt() {
-  document.getElementById('install-section').style.display = 'block';
-  document.getElementById('registration-section').style.display = 'none';
-  document.getElementById('registered-section').style.display = 'none';
-
-  // Mostrar instrucciones según plataforma
-  const platform = getPlatform();
-  document.querySelectorAll('.install-platform').forEach(el => el.style.display = 'none');
-  const platformEl = document.getElementById('install-' + platform);
-  if (platformEl) platformEl.style.display = 'block';
-
-  updateStatus('Instala la app para recibir notificaciones', 'warning');
+  // Solo bloquear en iOS sin PWA (donde push no funciona sin instalar)
+  if (isIOS()) {
+    document.getElementById('install-section').style.display = 'block';
+    document.getElementById('registration-section').style.display = 'none';
+    document.getElementById('registered-section').style.display = 'none';
+    document.getElementById('install-ios').style.display = 'block';
+    updateStatus('Instala la app para recibir notificaciones', 'warning');
+  } else {
+    // Android/Desktop: ir directo al registro, push funciona sin instalar
+    showRegistration();
+    updateStatus('Registra tu dispositivo para comenzar');
+  }
 }
 
 function showRegistration() {
