@@ -100,6 +100,7 @@ async function loadDevices() {
           <div class="card-actions">
             <button onclick="trackDevice(${d.id})" class="btn btn-danger btn-sm">📍 Trackear</button>
             <button onclick="sendMessage(${d.id})" class="btn btn-accent2 btn-sm">💬 Mensaje</button>
+            <button onclick="sendInstallLink(${d.id})" class="btn btn-secondary btn-sm" title="Enviar link de instalación">📲</button>
             <button onclick="viewOnMap(${d.id})" class="btn btn-secondary btn-sm">🗺️ Mapa</button>
             <button onclick="viewHistory(${d.id})" class="btn btn-secondary btn-sm">📋</button>
             <button onclick="editDevice(${d.id})" class="btn btn-secondary btn-sm">✏️</button>
@@ -188,6 +189,21 @@ async function doSendMessage(deviceId) {
   const data = await res.json();
   if (data.success) { closeDetailDirect(); updateStatus('Mensaje enviado ✓', 'success'); }
   else updateStatus('Error: ' + (data.error || ''), 'error');
+}
+
+async function sendInstallLink(deviceId) {
+  const d = allDevices.find(x => x.id === deviceId) || {};
+  const msg = 'Instala TrackMonk en tu teléfono: Abre este link en Firefox (Android) o Safari (iPhone) → tracker.monkeyfon.com';
+  // Enviar por push
+  try {
+    await af(`${API_BASE}/api/push-message/${deviceId}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: '📲 Instala TrackMonk', body: 'Abre tracker.monkeyfon.com y toca "Instalar aplicación"' }),
+    });
+    updateStatus('Link de instalación enviado por push ✓', 'success');
+  } catch (e) {
+    updateStatus('Error enviando', 'error');
+  }
 }
 
 // ============ TRACKING ============

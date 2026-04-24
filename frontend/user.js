@@ -137,6 +137,22 @@ async function showRegistered() {
 
   // Cargar viaje activo
   loadMyTrip();
+
+  // Mostrar botón de instalar si no está como PWA
+  if (!isStandalone) {
+    const installCard = document.getElementById('install-app-card');
+    const installHint = document.getElementById('install-app-hint');
+    if (installCard) {
+      installCard.style.display = 'block';
+      if (isIOS()) {
+        installHint.innerHTML = 'En Safari: toca <strong>Compartir</strong> (📤) → <strong>Agregar a inicio</strong>';
+      } else if (isAndroid()) {
+        installHint.innerHTML = 'Se agregará un ícono en tu pantalla de inicio';
+      } else {
+        installHint.innerHTML = 'Se abrirá como aplicación independiente';
+      }
+    }
+  }
 }
 
 // ============ REGISTRO ============
@@ -472,6 +488,35 @@ function resetDevice() {
     caches.delete('app-data').catch(() => {});
     showRegistration();
     updateStatus('Registra tu dispositivo de nuevo');
+  }
+}
+
+async function installApp() {
+  // Intentar prompt nativo primero
+  const prompt = deferredPrompt || window._deferredPrompt;
+  if (prompt) {
+    prompt.prompt();
+    const result = await prompt.userChoice;
+    deferredPrompt = null;
+    window._deferredPrompt = null;
+    if (result.outcome === 'accepted') {
+      updateStatus('App instalada ✓', 'success');
+      document.getElementById('install-app-card').style.display = 'none';
+    }
+    return;
+  }
+
+  // Si no hay prompt nativo, mostrar instrucciones
+  const hint = document.getElementById('install-app-hint');
+  if (isIOS()) {
+    hint.innerHTML = '👆 Toca el botón <strong>Compartir</strong> (📤) en la barra de Safari → <strong>"Agregar a pantalla de inicio"</strong>';
+    hint.style.color = '#e94560';
+  } else if (isAndroid()) {
+    hint.innerHTML = '👆 Toca el menú <strong>⋮</strong> de tu navegador → <strong>"Agregar a pantalla de inicio"</strong> o <strong>"Instalar"</strong>';
+    hint.style.color = '#e94560';
+  } else {
+    hint.innerHTML = '👆 Busca el ícono <strong>⬇️</strong> en la barra de direcciones o en el menú del navegador';
+    hint.style.color = '#e94560';
   }
 }
 
