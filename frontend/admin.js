@@ -46,6 +46,7 @@ function init() {
         document.getElementById('login-page').style.display = 'none';
         document.getElementById('dashboard').style.display = 'flex';
         loadDevices();
+        loadAlertCount();
       } else { sessionStorage.removeItem('adminToken'); adminToken = ''; }
     }).catch(() => {});
   }
@@ -59,10 +60,11 @@ function navigate(page) {
   event.currentTarget.classList.add('active');
   document.getElementById('page-' + page).classList.add('active');
   document.getElementById('page-title').textContent =
-    { devices: 'Dispositivos', map: 'Mapa', trips: 'Viajes', search: 'Buscar' }[page];
+    { devices: 'Dispositivos', map: 'Mapa', trips: 'Viajes', alerts: 'Alertas', search: 'Buscar' }[page];
   closeDetailDirect();
   if (page === 'map') setTimeout(() => { initMap(); loadAllOnMap(); }, 100);
   if (page === 'trips') loadTrips();
+  if (page === 'alerts') loadAlerts();
   // Close sidebar on mobile
   document.querySelector('.sidebar').classList.remove('open');
 }
@@ -503,6 +505,82 @@ async function viewTripOnMap(tripId) {
     });
     leafletMap.fitBounds(bounds, { padding: [30, 30] });
     updateStatus(`Viaje: ${esc(t.origin)} → ${esc(t.destination)} · ${t.locations.length} puntos`, 'success');
+  }, 200);
+}
+
+// ============ ALERTS ============
+
+async function loadAlertCount() {
+  try {
+    var res = await af(`${API_BASE}/api/alerts/active-count`);
+    var data = await res.json();
+    var badge = document.getElementById('alert-count-badge');
+    if (badge && data.count > 0) { badge.textContent = data.count; badge.style.display = 'inline'; }
+    else if (badge) { badge.style.display = 'none'; }
+  } catch (e) {}
+  // Refresh every 30 seconds
+  setTimeout(loadAlertCount, 30000);
+}
+
+async function loadAlerts() {
+  var status = document.getElementById('alert-filter').value;
+  var res = await af(`${API_BASE}/api/alerts?status=${status}`);
+  var alerts = await res.json();
+  var list = document.getElementById('alerts-list');
+  list.innerHTML = '';
+
+  if (alerts.length === 0) { list.innerHTML = '<div class="empty">No hay alertas</div>'; return; }
+
+  var typeLabels = { accident: '🚗💥 Accidente', robbery: '🔫 Robo / Asalto', breakdown: '🔧 Avería', help: '🆘 Auxilio', other: '⚠️ Otro' };
+  var statusLabels = { active: '🔴 Activa', attending: '🟡 Atendiendo', resolved: '✅ Resuelta' };
+  var statusBadges = { active: 'badge-active', attending: 'badge-completed', resolved: 'badge-completed' };
+
+  alerts.forEach(function(a) {
+    var date = new Date(a.created_at);
+    var cardStyle = a.status === 'active' ? 'border-left:4px solid #ef4444;' : a.status === 'attending' ? 'border-left:4px solid #eab308;' : 'border-left:4px solid #22c55e;';
+    list.innerHTML += '<div class="trip-card" style="' + cardStyle + '">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.5rem;">' +
+        '<div>' +
+          '<div class="card-title">' + (typeLabels[a.alert_type] || a.alert_type) + '</div>' +
+          '<div class="card-meta">👤 ' + esc(a.person_name || a.device_name) + (a.phone ? ' · 📞 ' + esc(a.phone) : '') + '</div>' +
+          (a.vehicle ? '<div class="card-meta">🚗 ' + esc(a.vehicle) + '</div>' : '') +
+          (a.message ? '<div class="card-meta">💬 ' + esc(a.message) + '</div>' : '') +
+          '<div class="card-meta">🕐 ' + date.toLocaleString('es-MX') + '</div>' +
+        '</div>' +
+        '<div><span class="card-badge ' + (statusBadges[a.status] || '') + '" style="' + (a.status === 'active' ? 'background:#fee2e2;color:#ef4444;' : '') + '">' + (statusLabels[a.status] || a.status) + '</span></div>' +
+      '</div>' +
+      '<div class="card-actions">' +
+        (a.latitude ? '<button onclick="viewAlertOnMap(' + a.latitude + ',' + a.longitude + ',\'' + esc(a.person_name || a.device_name) + '\')" class="btn btn-accent2 btn-sm">🗺️ Ver ubicación</button>' : '') +
+        (a.status === 'active' ? '<button onclick="updateAlert(' + a.id + ',\'attending\')" class="btn btn-primary btn-sm">🟡 Atender</button>' : '') +
+        (a.status !== 'resolved' ? '<button onclick="updateAlert(' + a.id + ',\'resolved\')" class="btn btn-success btn-sm">✅ Resolver</button>' : '') +
+        (a.phone ? '<a href="tel:' + esc(a.phone) + '" class="btn btn-secondary btn-sm">📞 Llamar</a>' : '') +
+      '</div>' +
+    '</div>';
+  });
+}
+
+async function updateAlert(alertId, status) {
+  await af(`${API_BASE}/api/alerts/${alertId}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: status }),
+  });
+  updateStatus('Alerta actualizada', 'success');
+  loadAlerts();
+  loadAlertCount();
+}
+
+function viewAlertOnMap(lat, lng, name) {
+  document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
+  document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+  document.querySelectorAll('.nav-item')[1].classList.add('active');
+  document.getElementById('page-map').classList.add('active');
+  document.getElementById('page-title').textContent = 'Mapa';
+  setTimeout(function() {
+    initMap(); clearMarkers();
+    var marker = L.marker([lat, lng]).addTo(leafletMap);
+    marker.bindPopup('<strong>🚨 ' + esc(name) + '</strong><br>Alerta de emergencia').openPopup();
+    mapMarkers.push(marker);
+    leafletMap.setView([lat, lng], 16);
   }, 200);
 }
 

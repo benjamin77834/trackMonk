@@ -512,6 +512,87 @@ app.post('/api/my-trips/:tripId/costs', async (req, res) => {
   } finally { if (conn) conn.release(); }
 });
 
+// ============ ALERTAS DE EMERGENCIA ============
+
+// Crear alerta (público - desde el usuario)
+app.post('/api/alerts', async (req, res) => {
+  const { deviceId, alert_type, message, latitude, longitude, accuracy } = req.body;
+  if (!deviceId || !alert_type) return res.status(400).json({ error: 'deviceId y alert_type requeridos' });
+
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const result = await conn.query(
+      'INSERT INTO alerts (device_id, alert_type, message, latitude, longitude, accuracy) VALUES (?, ?, ?, ?, ?, ?)',
+      [deviceId, alert_type, message || '', latitude || null, longitude || null, accuracy || null]);
+    res.json({ success: true, alertId: Number(result.insertId) });
+  } catch (err) {
+    console.error('Error creando alerta:', err);
+    res.status(500).json({ error: 'Error interno' });
+  } finally { if (conn) conn.release(); }
+});
+
+// Listar alertas (admin)
+app.get('/api/alerts', requireAdmin, async (req, res) => {
+  const { status } = req.query;
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    let sql = `SELECT a.*, d.person_name, d.device_name, d.phone, d.vehicle
+               FROM alerts a JOIN devices d ON d.id = a.device_id WHERE 1=1`;
+    const params = [];
+    if (status) { sql += ' AND a.status = ?'; params.push(status); }
+    sql += ' ORDER BY a.created_at DESC LIMIT 100';
+    res.json(await conn.query(sql, params));
+  } catch (err) {
+    res.status(500).json({ error: 'Error interno' });
+  } finally { if (conn) conn.release(); }
+});
+
+// Contar alertas activas (admin)
+app.get('/api/alerts/active-count', requireAdmin, async (req, res) => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const rows = await conn.query("SELECT COUNT(*) as count FROM alerts WHERE status = 'active'");
+    res.json({ count: Number(rows[0].count) });
+  } catch (err) {
+    res.status(500).json({ error: 'Error interno' });
+  } finally { if (conn) conn.release(); }
+});
+
+// Actualizar estado de alerta (admin)
+app.put('/api/alerts/:alertId', requireAdmin, async (req, res) => {
+  const { alertId } = req.params;
+  const { status, resolved_by } = req.body;
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    if (status === 'resolved') {
+      await conn.query('UPDATE alerts SET status = ?, resolved_at = NOW(), resolved_by = ? WHERE id = ?',
+        [status, resolved_by || 'admin', alertId]);
+    } else {
+      await conn.query('UPDATE alerts SET status = ? WHERE id = ?', [status, alertId]);
+    }
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Error interno' });
+  } finally { if (conn) conn.release(); }
+});
+
+// Mis alertas (público)
+app.get('/api/my-alerts/:deviceId', async (req, res) => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const alerts = await conn.query(
+      'SELECT * FROM alerts WHERE device_id = ? ORDER BY created_at DESC LIMIT 20', [req.params.deviceId]);
+    res.json(alerts);
+  } catch (err) {
+    res.status(500).json({ error: 'Error interno' });
+  } finally { if (conn) conn.release(); }
+});
+
 // ============ VIAJES ============
 
 // Crear viaje

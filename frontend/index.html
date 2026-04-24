@@ -79,6 +79,12 @@
         <p id="registered-name" style="font-size:1.1rem; margin:0.5rem 0;"></p>
         <p style="color:#888; font-size:0.85rem;">Tu ubicación se envía cuando se solicita por notificación push.</p>
         <button onclick="sendMyLocation()" class="btn btn-primary" style="margin-top:1rem;">📍 Enviar mi ubicación ahora</button>
+
+        <!-- Botón de emergencia -->
+        <button onclick="showEmergencyPanel()" style="width:100%;margin-top:0.75rem;padding:1rem;background:#ef4444;color:#fff;border:none;border-radius:12px;font-size:1.1rem;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(239,68,68,0.3);">
+          🚨 EMERGENCIA
+        </button>
+        <div id="emergency-panel" style="display:none;margin-top:0.75rem;"></div>
         <button id="activate-push-btn" onclick="activatePush()" class="btn btn-primary" style="margin-top:0.5rem; background:#1a73e8; display:none;">🔔 Activar notificaciones push</button>
         <button onclick="viewMyMessages()" class="btn btn-primary" style="margin-top:0.5rem; background:#fff; color:#1a1a1a; border:1px solid #e0e0e0;">
           🔔 Mis notificaciones <span id="unread-badge" style="display:none; background:#ef4444; color:#fff; font-size:0.7rem; padding:0.1rem 0.4rem; border-radius:10px; margin-left:0.3rem;"></span>

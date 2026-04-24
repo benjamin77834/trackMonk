@@ -331,6 +331,81 @@ async function getLocationAndSend(requestId, devId) {
   }
 }
 
+// ============ EMERGENCIA ============
+
+function showEmergencyPanel() {
+  var panel = document.getElementById('emergency-panel');
+  if (panel.style.display === 'block') { panel.style.display = 'none'; return; }
+
+  panel.style.display = 'block';
+  panel.innerHTML = '\
+    <div style="background:#fff;border:2px solid #ef4444;border-radius:12px;padding:1rem;">\
+      <h3 style="color:#ef4444;text-align:center;margin-bottom:0.75rem;">🚨 Selecciona el tipo de emergencia</h3>\
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">\
+        <button onclick="sendAlert(\'accident\')" style="padding:1rem;background:#fee2e2;border:1px solid #fca5a5;border-radius:10px;cursor:pointer;font-size:0.9rem;font-weight:600;color:#991b1b;">🚗💥<br>Accidente</button>\
+        <button onclick="sendAlert(\'robbery\')" style="padding:1rem;background:#fef9c3;border:1px solid #fde047;border-radius:10px;cursor:pointer;font-size:0.9rem;font-weight:600;color:#854d0e;">🔫<br>Robo / Asalto</button>\
+        <button onclick="sendAlert(\'breakdown\')" style="padding:1rem;background:#dbeafe;border:1px solid #93c5fd;border-radius:10px;cursor:pointer;font-size:0.9rem;font-weight:600;color:#1e40af;">🔧<br>Avería</button>\
+        <button onclick="sendAlert(\'help\')" style="padding:1rem;background:#fce7f3;border:1px solid #f9a8d4;border-radius:10px;cursor:pointer;font-size:0.9rem;font-weight:600;color:#9d174d;">🆘<br>Auxilio</button>\
+      </div>\
+      <div style="margin-top:0.75rem;">\
+        <input id="alert-message" type="text" placeholder="Mensaje adicional (opcional)" style="width:100%;padding:0.6rem;border:1px solid #e0e0e0;border-radius:8px;font-size:0.9rem;">\
+      </div>\
+      <button onclick="document.getElementById(\'emergency-panel\').style.display=\'none\'" style="width:100%;margin-top:0.5rem;padding:0.5rem;background:#f0f0f0;border:none;border-radius:8px;color:#666;cursor:pointer;">Cancelar</button>\
+    </div>';
+}
+
+async function sendAlert(alertType) {
+  updateStatus('Enviando alerta de emergencia...', 'warning');
+
+  try {
+    var position = await new Promise(function(resolve, reject) {
+      navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+    });
+
+    var msg = document.getElementById('alert-message');
+    var message = msg ? msg.value.trim() : '';
+
+    var res = await fetch(API_BASE + '/api/alerts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        deviceId: deviceId,
+        alert_type: alertType,
+        message: message,
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        accuracy: position.coords.accuracy,
+      }),
+    });
+
+    var data = await res.json();
+    if (data.success) {
+      updateStatus('🚨 Alerta enviada — ayuda en camino', 'error');
+      document.getElementById('emergency-panel').style.display = 'none';
+    } else {
+      updateStatus('Error enviando alerta', 'error');
+    }
+  } catch (err) {
+    // Si no puede obtener ubicación, enviar sin ella
+    try {
+      var msg2 = document.getElementById('alert-message');
+      await fetch(API_BASE + '/api/alerts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deviceId: deviceId,
+          alert_type: alertType,
+          message: msg2 ? msg2.value.trim() : '',
+        }),
+      });
+      updateStatus('🚨 Alerta enviada (sin ubicación)', 'error');
+      document.getElementById('emergency-panel').style.display = 'none';
+    } catch (e) {
+      updateStatus('Error: ' + e.message, 'error');
+    }
+  }
+}
+
 // ============ MIS NOTIFICACIONES ============
 
 async function loadUnreadCount() {

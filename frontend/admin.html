@@ -39,6 +39,9 @@
         <button class="nav-item" onclick="navigate('trips')">
           <span class="nav-icon">🚛</span><span class="nav-label">Viajes</span>
         </button>
+        <button class="nav-item" onclick="navigate('alerts')">
+          <span class="nav-icon">🚨</span><span class="nav-label">Alertas <span id="alert-count-badge" style="display:none;background:#ef4444;color:#fff;font-size:0.65rem;padding:0.1rem 0.35rem;border-radius:10px;margin-left:0.2rem;"></span></span>
+        </button>
         <button class="nav-item" onclick="navigate('search')">
           <span class="nav-icon">🔍</span><span class="nav-label">Buscar</span>
         </button>
@@ -88,6 +91,20 @@
           <button onclick="loadTrips()" class="btn btn-secondary">🔄</button>
         </div>
         <div id="trips-list"></div>
+      </section>
+
+      <!-- Page: Alertas -->
+      <section id="page-alerts" class="page">
+        <div class="toolbar">
+          <select id="alert-filter" onchange="loadAlerts()" class="select-filter">
+            <option value="">Todas</option>
+            <option value="active" selected>Activas</option>
+            <option value="attending">Atendiendo</option>
+            <option value="resolved">Resueltas</option>
+          </select>
+          <button onclick="loadAlerts()" class="btn btn-secondary">🔄</button>
+        </div>
+        <div id="alerts-list"></div>
       </section>
 
       <!-- Page: Buscar -->
