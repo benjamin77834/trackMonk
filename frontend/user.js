@@ -138,6 +138,9 @@ async function showRegistered() {
   // Cargar viaje activo
   loadMyTrip();
 
+  // Cargar mensajes no leídos
+  loadUnreadCount();
+
   // Mostrar botón de instalar si no está como PWA
   if (!isStandalone) {
     const installCard = document.getElementById('install-app-card');
@@ -326,6 +329,76 @@ async function getLocationAndSend(requestId, devId) {
   } catch (err) {
     console.error('Error enviando ubicación:', err);
   }
+}
+
+// ============ MIS NOTIFICACIONES ============
+
+async function loadUnreadCount() {
+  if (!deviceId) return;
+  try {
+    const res = await fetch(`${API_BASE}/api/my-messages/${deviceId}/unread`);
+    const data = await res.json();
+    const badge = document.getElementById('unread-badge');
+    if (badge && data.count > 0) {
+      badge.textContent = data.count;
+      badge.style.display = 'inline';
+    } else if (badge) {
+      badge.style.display = 'none';
+    }
+  } catch (e) { /* ignore */ }
+}
+
+async function viewMyMessages() {
+  const container = document.getElementById('my-messages');
+  if (container.style.display === 'block') { container.style.display = 'none'; return; }
+
+  container.style.display = 'block';
+  container.innerHTML = '<p style="color:#888; text-align:center;">Cargando...</p>';
+
+  try {
+    const res = await fetch(`${API_BASE}/api/my-messages/${deviceId}`);
+    const messages = await res.json();
+
+    if (messages.length === 0) {
+      container.innerHTML = '<div style="background:#fff;border:1px solid #e0e0e0;border-radius:12px;padding:1.5rem;text-align:center;color:#aaa;">No hay notificaciones</div>';
+      return;
+    }
+
+    let html = '<div style="background:#fff;border:1px solid #e0e0e0;border-radius:12px;padding:1rem;">';
+    html += '<h3 style="font-size:1rem;margin-bottom:0.75rem;color:#1a1a1a;">🔔 Notificaciones</h3>';
+
+    messages.forEach(function(m) {
+      var date = new Date(m.created_at);
+      var isUnread = !m.is_read;
+      html += '<div style="padding:0.75rem;margin-bottom:0.5rem;border-radius:8px;border:1px solid ' + (isUnread ? '#22c55e' : '#e0e0e0') + ';background:' + (isUnread ? '#dcfce7' : '#f9f9f9') + ';" onclick="markRead(' + m.id + ', this)">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;">';
+      html += '<strong style="font-size:0.9rem;color:#1a1a1a;">' + (isUnread ? '🟢 ' : '') + escapeHtml(m.title) + '</strong>';
+      html += '<span style="font-size:0.7rem;color:#999;">' + date.toLocaleDateString('es-MX', {day:'numeric',month:'short'}) + ' ' + date.toLocaleTimeString('es-MX', {hour:'2-digit',minute:'2-digit'}) + '</span>';
+      html += '</div>';
+      html += '<p style="font-size:0.85rem;color:#444;margin-top:0.25rem;">' + escapeHtml(m.body) + '</p>';
+      html += '</div>';
+    });
+
+    html += '</div>';
+    container.innerHTML = html;
+
+    // Marcar todos como leídos
+    messages.filter(function(m) { return !m.is_read; }).forEach(function(m) {
+      fetch(API_BASE + '/api/my-messages/' + m.id + '/read', { method: 'PUT' });
+    });
+    setTimeout(function() {
+      var badge = document.getElementById('unread-badge');
+      if (badge) badge.style.display = 'none';
+    }, 1000);
+  } catch (err) {
+    container.innerHTML = '<p style="color:#ef4444;text-align:center;">Error cargando notificaciones</p>';
+  }
+}
+
+function markRead(messageId, el) {
+  fetch(API_BASE + '/api/my-messages/' + messageId + '/read', { method: 'PUT' });
+  el.style.background = '#f9f9f9';
+  el.style.borderColor = '#e0e0e0';
 }
 
 // ============ MI VIAJE ACTIVO ============

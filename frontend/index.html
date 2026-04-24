@@ -80,8 +80,12 @@
         <p style="color:#888; font-size:0.85rem;">Tu ubicación se envía cuando se solicita por notificación push.</p>
         <button onclick="sendMyLocation()" class="btn btn-primary" style="margin-top:1rem;">📍 Enviar mi ubicación ahora</button>
         <button id="activate-push-btn" onclick="activatePush()" class="btn btn-primary" style="margin-top:0.5rem; background:#1a73e8; display:none;">🔔 Activar notificaciones push</button>
-        <button onclick="viewMyHistory()" class="btn btn-primary" style="margin-top:0.5rem; background:#2a2a5e;">📋 Mi historial</button>
+        <button onclick="viewMyMessages()" class="btn btn-primary" style="margin-top:0.5rem; background:#fff; color:#1a1a1a; border:1px solid #e0e0e0;">
+          🔔 Mis notificaciones <span id="unread-badge" style="display:none; background:#ef4444; color:#fff; font-size:0.7rem; padding:0.1rem 0.4rem; border-radius:10px; margin-left:0.3rem;"></span>
+        </button>
+        <button onclick="viewMyHistory()" class="btn btn-primary" style="margin-top:0.5rem; background:#fff; color:#1a1a1a; border:1px solid #e0e0e0;">📋 Mi historial</button>
         <div id="my-trip" style="display:none; margin-top:1rem; text-align:left;"></div>
+        <div id="my-messages" style="display:none; margin-top:1rem; text-align:left;"></div>
         <p id="last-sent" style="color:#666; font-size:0.8rem; margin-top:0.5rem;"></p>
         <div id="my-history" style="display:none; margin-top:1rem; text-align:left;"></div>
         <button onclick="resetDevice()" class="btn btn-small" style="margin-top:1.5rem; font-size:0.75rem; color:#888;">🔄 Cambiar dispositivo / Re-registrar</button>

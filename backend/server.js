@@ -364,19 +364,26 @@ app.post('/api/push-message/:deviceId', requireAdmin, async (req, res) => {
     const devices = await conn.query('SELECT * FROM devices WHERE id = ?', [deviceId]);
     if (devices.length === 0) return res.status(404).json({ error: 'Dispositivo no encontrado' });
 
+    // Guardar mensaje en BD
+    await conn.query('INSERT INTO messages (device_id, title, body) VALUES (?, ?, ?)',
+      [deviceId, title || 'TrackMonk', body]);
+
     const device = devices[0];
-    if (!device.endpoint || device.endpoint.length === 0) {
-      return res.status(400).json({ error: 'Este dispositivo no tiene push activado' });
+    if (device.endpoint && device.endpoint.length > 0) {
+      const pushSubscription = { endpoint: device.endpoint, keys: { p256dh: device.p256dh, auth: device.auth } };
+      const payload = JSON.stringify({
+        type: 'custom-message',
+        title: title || 'TrackMonk',
+        body: body,
+      });
+
+      try {
+        await webPush.sendNotification(pushSubscription, payload);
+      } catch (pushErr) {
+        console.error('Push falló pero mensaje guardado:', pushErr.statusCode || pushErr.message);
+      }
     }
 
-    const pushSubscription = { endpoint: device.endpoint, keys: { p256dh: device.p256dh, auth: device.auth } };
-    const payload = JSON.stringify({
-      type: 'custom-message',
-      title: title || 'TrackMonk',
-      body: body,
-    });
-
-    await webPush.sendNotification(pushSubscription, payload);
     res.json({ success: true });
   } catch (err) {
     console.error('Error enviando mensaje:', err);
@@ -384,6 +391,45 @@ app.post('/api/push-message/:deviceId', requireAdmin, async (req, res) => {
   } finally {
     if (conn) conn.release();
   }
+});
+
+// Mis mensajes (público, solo del propio dispositivo)
+app.get('/api/my-messages/:deviceId', async (req, res) => {
+  const { deviceId } = req.params;
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const messages = await conn.query(
+      'SELECT * FROM messages WHERE device_id = ? ORDER BY created_at DESC LIMIT 50', [deviceId]);
+    res.json(messages);
+  } catch (err) {
+    res.status(500).json({ error: 'Error interno' });
+  } finally { if (conn) conn.release(); }
+});
+
+// Marcar mensaje como leído
+app.put('/api/my-messages/:messageId/read', async (req, res) => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    await conn.query('UPDATE messages SET is_read = 1 WHERE id = ?', [req.params.messageId]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Error interno' });
+  } finally { if (conn) conn.release(); }
+});
+
+// Contar mensajes no leídos
+app.get('/api/my-messages/:deviceId/unread', async (req, res) => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const rows = await conn.query(
+      'SELECT COUNT(*) as count FROM messages WHERE device_id = ? AND is_read = 0', [req.params.deviceId]);
+    res.json({ count: Number(rows[0].count) });
+  } catch (err) {
+    res.status(500).json({ error: 'Error interno' });
+  } finally { if (conn) conn.release(); }
 });
 
 // Trackear TODOS los dispositivos (campaña masiva)
