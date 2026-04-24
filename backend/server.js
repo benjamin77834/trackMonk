@@ -423,6 +423,145 @@ app.post('/api/track-all', requireAdmin, async (req, res) => {
   }
 });
 
+// ============ VIAJES ============
+
+// Crear viaje
+app.post('/api/trips', requireAdmin, async (req, res) => {
+  const { device_id, origin, destination, cargo, notes } = req.body;
+  if (!device_id || !origin || !destination) {
+    return res.status(400).json({ error: 'device_id, origin y destination son requeridos' });
+  }
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const result = await conn.query(
+      'INSERT INTO trips (device_id, origin, destination, cargo, notes) VALUES (?, ?, ?, ?, ?)',
+      [device_id, origin, destination, cargo || '', notes || '']);
+    res.json({ success: true, tripId: Number(result.insertId) });
+  } catch (err) {
+    console.error('Error creando viaje:', err);
+    res.status(500).json({ error: 'Error interno' });
+  } finally { if (conn) conn.release(); }
+});
+
+// Listar viajes (con filtro opcional por status y device)
+app.get('/api/trips', requireAdmin, async (req, res) => {
+  const { status, device_id } = req.query;
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    let sql = `SELECT t.*, d.person_name, d.device_name, d.vehicle, d.phone,
+               (SELECT SUM(amount) FROM trip_costs WHERE trip_id = t.id) as total_cost,
+               (SELECT COUNT(*) FROM trip_locations WHERE trip_id = t.id) as location_count
+               FROM trips t JOIN devices d ON d.id = t.device_id WHERE 1=1`;
+    const params = [];
+    if (status) { sql += ' AND t.status = ?'; params.push(status); }
+    if (device_id) { sql += ' AND t.device_id = ?'; params.push(device_id); }
+    sql += ' ORDER BY t.started_at DESC LIMIT 100';
+    const trips = await conn.query(sql, params);
+    res.json(trips);
+  } catch (err) {
+    console.error('Error listando viajes:', err);
+    res.status(500).json({ error: 'Error interno' });
+  } finally { if (conn) conn.release(); }
+});
+
+// Obtener un viaje con costos y ubicaciones
+app.get('/api/trips/:tripId', requireAdmin, async (req, res) => {
+  const { tripId } = req.params;
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const trips = await conn.query(
+      `SELECT t.*, d.person_name, d.device_name, d.vehicle, d.phone
+       FROM trips t JOIN devices d ON d.id = t.device_id WHERE t.id = ?`, [tripId]);
+    if (trips.length === 0) return res.status(404).json({ error: 'Viaje no encontrado' });
+    const trip = trips[0];
+    trip.costs = await conn.query('SELECT * FROM trip_costs WHERE trip_id = ? ORDER BY created_at', [tripId]);
+    trip.locations = await conn.query('SELECT * FROM trip_locations WHERE trip_id = ? ORDER BY recorded_at', [tripId]);
+    trip.total_cost = trip.costs.reduce((sum, c) => sum + parseFloat(c.amount), 0);
+    res.json(trip);
+  } catch (err) {
+    console.error('Error obteniendo viaje:', err);
+    res.status(500).json({ error: 'Error interno' });
+  } finally { if (conn) conn.release(); }
+});
+
+// Actualizar viaje (completar, cancelar, editar)
+app.put('/api/trips/:tripId', requireAdmin, async (req, res) => {
+  const { tripId } = req.params;
+  const { status, origin, destination, cargo, notes } = req.body;
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    if (status === 'completed') {
+      await conn.query('UPDATE trips SET status = ?, completed_at = NOW() WHERE id = ?', [status, tripId]);
+    } else if (status) {
+      await conn.query('UPDATE trips SET status = ? WHERE id = ?', [status, tripId]);
+    }
+    if (origin || destination || cargo !== undefined || notes !== undefined) {
+      const fields = []; const vals = [];
+      if (origin) { fields.push('origin = ?'); vals.push(origin); }
+      if (destination) { fields.push('destination = ?'); vals.push(destination); }
+      if (cargo !== undefined) { fields.push('cargo = ?'); vals.push(cargo); }
+      if (notes !== undefined) { fields.push('notes = ?'); vals.push(notes); }
+      if (fields.length > 0) {
+        vals.push(tripId);
+        await conn.query(`UPDATE trips SET ${fields.join(', ')} WHERE id = ?`, vals);
+      }
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error actualizando viaje:', err);
+    res.status(500).json({ error: 'Error interno' });
+  } finally { if (conn) conn.release(); }
+});
+
+// Agregar costo a un viaje
+app.post('/api/trips/:tripId/costs', requireAdmin, async (req, res) => {
+  const { tripId } = req.params;
+  const { concept, amount } = req.body;
+  if (!concept || amount == null) return res.status(400).json({ error: 'concept y amount requeridos' });
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    await conn.query('INSERT INTO trip_costs (trip_id, concept, amount) VALUES (?, ?, ?)', [tripId, concept, amount]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error agregando costo:', err);
+    res.status(500).json({ error: 'Error interno' });
+  } finally { if (conn) conn.release(); }
+});
+
+// Eliminar costo
+app.delete('/api/trip-costs/:costId', requireAdmin, async (req, res) => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    await conn.query('DELETE FROM trip_costs WHERE id = ?', [req.params.costId]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Error interno' });
+  } finally { if (conn) conn.release(); }
+});
+
+// Agregar ubicación a un viaje (desde el dispositivo)
+app.post('/api/trips/:tripId/location', async (req, res) => {
+  const { tripId } = req.params;
+  const { latitude, longitude, accuracy } = req.body;
+  if (latitude == null || longitude == null) return res.status(400).json({ error: 'latitude y longitude requeridos' });
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    await conn.query('INSERT INTO trip_locations (trip_id, latitude, longitude, accuracy) VALUES (?, ?, ?, ?)',
+      [tripId, latitude, longitude, accuracy || null]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error guardando ubicación de viaje:', err);
+    res.status(500).json({ error: 'Error interno' });
+  } finally { if (conn) conn.release(); }
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Location Tracker API corriendo en puerto ${PORT}`);
 });

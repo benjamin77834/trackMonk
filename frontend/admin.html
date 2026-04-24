@@ -6,76 +6,103 @@
   <title>TrackMonk - Admin</title>
   <meta name="theme-color" content="#e94560">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/admin-styles.css">
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1>🐵 TrackMonk <span class="badge-admin">ADMIN</span></h1>
-      <div id="status" class="status status-info">Panel de administración</div>
-    </header>
-
-    <!-- Login -->
-    <section id="login-section">
-      <div class="card" style="text-align:center;">
-        <h2>🔒 Acceso Admin</h2>
-        <div class="form-group">
-          <input type="password" id="admin-password" placeholder="Contraseña" onkeydown="if(event.key==='Enter')adminLogin()">
-        </div>
-        <button onclick="adminLogin()" class="btn btn-primary">Entrar</button>
-      </div>
-    </section>
-
-    <!-- Dashboard (oculto hasta login) -->
-    <section id="dashboard-section" style="display:none;">
-
-    <!-- Tabs -->
-    <div class="tabs">
-      <button class="tab active" onclick="switchTab('devices')">📱 Dispositivos</button>
-      <button class="tab" onclick="switchTab('map')">🗺️ Mapa</button>
-      <button class="tab" onclick="switchTab('search')">🔍 Buscar</button>
+  <!-- Login -->
+  <div id="login-page" class="login-page">
+    <div class="login-card">
+      <div class="login-logo">🐵</div>
+      <h1>TrackMonk</h1>
+      <p>Panel de Administración</p>
+      <div id="status-login" class="status"></div>
+      <input type="password" id="admin-password" placeholder="Contraseña" onkeydown="if(event.key==='Enter')adminLogin()">
+      <button onclick="adminLogin()" class="btn-login">Entrar</button>
     </div>
+  </div>
 
-    <!-- Tab: Dispositivos -->
-    <div id="tab-devices" class="tab-content active">
-      <div class="card tab-first-card">
-        <div class="card-header">
-          <h2>Dispositivos</h2>
-          <div style="display:flex;gap:0.4rem;">
-            <button onclick="trackAll()" class="btn btn-track" style="font-size:0.75rem;">📍 Trackear todos</button>
-            <button onclick="loadDevices()" class="btn btn-small">🔄</button>
-          </div>
-        </div>
-        <div id="devices-list"></div>
+  <!-- Dashboard -->
+  <div id="dashboard" style="display:none;">
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-logo">
+        <span class="logo-icon">🐵</span>
+        <span class="logo-text">TrackMonk</span>
       </div>
-    </div>
-
-    <!-- Tab: Mapa -->
-    <div id="tab-map" class="tab-content">
-      <div class="card tab-first-card">
-        <div class="card-header">
-          <h2>Mapa en vivo</h2>
-          <button onclick="loadAllOnMap()" class="btn btn-small">🔄</button>
-        </div>
-        <div id="map" style="height: 450px; border-radius: 8px;"></div>
+      <div class="nav-items">
+        <button class="nav-item active" onclick="navigate('devices')">
+          <span class="nav-icon">📱</span><span class="nav-label">Dispositivos</span>
+        </button>
+        <button class="nav-item" onclick="navigate('map')">
+          <span class="nav-icon">🗺️</span><span class="nav-label">Mapa</span>
+        </button>
+        <button class="nav-item" onclick="navigate('trips')">
+          <span class="nav-icon">🚛</span><span class="nav-label">Viajes</span>
+        </button>
+        <button class="nav-item" onclick="navigate('search')">
+          <span class="nav-icon">🔍</span><span class="nav-label">Buscar</span>
+        </button>
       </div>
-    </div>
+      <div class="sidebar-footer">
+        <button onclick="adminLogout()" class="nav-item nav-logout">
+          <span class="nav-icon">🚪</span><span class="nav-label">Salir</span>
+        </button>
+      </div>
+    </nav>
 
-    <!-- Tab: Buscar -->
-    <div id="tab-search" class="tab-content">
-      <div class="card tab-first-card">
-        <h2>Buscar dispositivo</h2>
-        <div class="form-group">
-          <input type="text" id="search-input" placeholder="Nombre, teléfono, empresa o vehículo..." oninput="searchDevices()">
+    <!-- Main content -->
+    <main class="main-content">
+      <header class="top-bar">
+        <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+        <h2 id="page-title">Dispositivos</h2>
+        <div id="status" class="status status-info"></div>
+      </header>
+
+      <!-- Page: Dispositivos -->
+      <section id="page-devices" class="page active">
+        <div class="toolbar">
+          <button onclick="trackAll()" class="btn btn-danger">📍 Trackear todos</button>
+          <button onclick="loadDevices()" class="btn btn-secondary">🔄 Refrescar</button>
+        </div>
+        <div id="devices-list" class="grid"></div>
+      </section>
+
+      <!-- Page: Mapa -->
+      <section id="page-map" class="page">
+        <div class="toolbar">
+          <button onclick="loadAllOnMap()" class="btn btn-secondary">🔄 Actualizar mapa</button>
+        </div>
+        <div id="map" class="map-container"></div>
+      </section>
+
+      <!-- Page: Viajes -->
+      <section id="page-trips" class="page">
+        <div class="toolbar">
+          <button onclick="showNewTripForm()" class="btn btn-primary">➕ Nuevo viaje</button>
+          <select id="trip-filter" onchange="loadTrips()" class="select-filter">
+            <option value="">Todos</option>
+            <option value="active">Activos</option>
+            <option value="completed">Completados</option>
+            <option value="cancelled">Cancelados</option>
+          </select>
+          <button onclick="loadTrips()" class="btn btn-secondary">🔄</button>
+        </div>
+        <div id="trips-list"></div>
+      </section>
+
+      <!-- Page: Buscar -->
+      <section id="page-search" class="page">
+        <div class="search-bar">
+          <input type="text" id="search-input" placeholder="Buscar por nombre, teléfono, empresa o vehículo..." oninput="searchDevices()">
         </div>
         <div id="search-results"></div>
+      </section>
+
+      <!-- Detail panel (modal) -->
+      <div id="detail-overlay" class="overlay" style="display:none;" onclick="closeDetail(event)">
+        <div id="detail-panel" class="detail-panel"></div>
       </div>
-    </div>
-
-    <!-- Panel de detalle -->
-    <div id="detail-panel" class="card" style="display: none;"></div>
-
-    </section><!-- fin dashboard-section -->
+    </main>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
