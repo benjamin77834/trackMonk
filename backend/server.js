@@ -423,6 +423,49 @@ app.post('/api/track-all', requireAdmin, async (req, res) => {
   }
 });
 
+// Mis viajes activos (público, solo del propio dispositivo)
+app.get('/api/my-trips/:deviceId', async (req, res) => {
+  const { deviceId } = req.params;
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const trips = await conn.query(
+      `SELECT t.*, 
+       (SELECT SUM(amount) FROM trip_costs WHERE trip_id = t.id) as total_cost
+       FROM trips t WHERE t.device_id = ? AND t.status = 'active' ORDER BY t.started_at DESC`, [deviceId]);
+    res.json(trips);
+  } catch (err) {
+    res.status(500).json({ error: 'Error interno' });
+  } finally { if (conn) conn.release(); }
+});
+
+// Mis costos de un viaje (público)
+app.get('/api/my-trips/:tripId/costs', async (req, res) => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const costs = await conn.query('SELECT * FROM trip_costs WHERE trip_id = ? ORDER BY created_at DESC', [req.params.tripId]);
+    res.json(costs);
+  } catch (err) {
+    res.status(500).json({ error: 'Error interno' });
+  } finally { if (conn) conn.release(); }
+});
+
+// Agregar costo desde el usuario (público, vinculado a un viaje)
+app.post('/api/my-trips/:tripId/costs', async (req, res) => {
+  const { tripId } = req.params;
+  const { concept, amount } = req.body;
+  if (!concept || amount == null) return res.status(400).json({ error: 'concept y amount requeridos' });
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    await conn.query('INSERT INTO trip_costs (trip_id, concept, amount) VALUES (?, ?, ?)', [tripId, concept, amount]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Error interno' });
+  } finally { if (conn) conn.release(); }
+});
+
 // ============ VIAJES ============
 
 // Crear viaje

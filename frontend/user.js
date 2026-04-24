@@ -134,6 +134,9 @@ async function showRegistered() {
   }
 
   updateStatus(hasPushActive ? 'Dispositivo activo con push ✓' : 'Dispositivo activo (sin push)', hasPushActive ? 'success' : 'warning');
+
+  // Cargar viaje activo
+  loadMyTrip();
 }
 
 // ============ REGISTRO ============
@@ -309,6 +312,110 @@ async function getLocationAndSend(requestId, devId) {
   }
 }
 
+// ============ MI VIAJE ACTIVO ============
+
+async function loadMyTrip() {
+  if (!deviceId) return;
+  const container = document.getElementById('my-trip');
+  try {
+    const res = await fetch(`${API_BASE}/api/my-trips/${deviceId}`);
+    const trips = await res.json();
+
+    if (trips.length === 0) {
+      container.style.display = 'none';
+      return;
+    }
+
+    container.style.display = 'block';
+    const t = trips[0]; // viaje activo más reciente
+
+    // Cargar costos
+    const costsRes = await fetch(`${API_BASE}/api/my-trips/${t.id}/costs`);
+    const costs = await costsRes.json();
+    const totalCost = costs.reduce((sum, c) => sum + parseFloat(c.amount), 0);
+
+    let costsHtml = '';
+    if (costs.length > 0) {
+      costsHtml = '<div style="margin-top:0.5rem;">';
+      costs.forEach(c => {
+        costsHtml += `<div style="display:flex;justify-content:space-between;padding:0.3rem 0;border-bottom:1px solid #1a1a4e;font-size:0.8rem;">
+          <span>${escapeHtml(c.concept)}</span><span>$${parseFloat(c.amount).toFixed(2)}</span>
+        </div>`;
+      });
+      costsHtml += '</div>';
+    }
+
+    container.innerHTML = `
+      <div style="background:#16213e;border:1px solid #1a1a4e;border-radius:12px;padding:1rem;">
+        <h3 style="color:#fff;font-size:1rem;margin-bottom:0.5rem;">🚛 Viaje activo</h3>
+        <div style="display:flex;align-items:center;gap:0.5rem;margin:0.5rem 0;">
+          <span style="width:10px;height:10px;border-radius:50%;background:#22c55e;"></span>
+          <span style="font-size:0.85rem;">${escapeHtml(t.origin)}</span>
+          <span style="flex:1;height:2px;background:#252550;"></span>
+          <span style="font-size:0.85rem;">${escapeHtml(t.destination)}</span>
+          <span style="width:10px;height:10px;border-radius:50%;background:#e94560;"></span>
+        </div>
+        ${t.cargo ? `<div style="font-size:0.8rem;color:#888;">📦 ${escapeHtml(t.cargo)}</div>` : ''}
+        <div style="text-align:center;margin:0.75rem 0;padding:0.75rem;background:#0f0f23;border-radius:8px;">
+          <div style="font-size:0.75rem;color:#888;">Gastos totales</div>
+          <div style="font-size:1.3rem;font-weight:700;color:#fff;">$${totalCost.toLocaleString('es-MX', {minimumFractionDigits:2})}</div>
+        </div>
+        ${costsHtml}
+        <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid #1a1a4e;">
+          <div style="font-size:0.85rem;color:#fff;margin-bottom:0.5rem;">Agregar gasto</div>
+          <div style="display:flex;gap:0.5rem;">
+            <select id="cost-type" style="flex:1;padding:0.5rem;border:1px solid #2a2a5e;border-radius:8px;background:#0f0f23;color:#fff;font-size:0.85rem;">
+              <option value="Gasolina">⛽ Gasolina</option>
+              <option value="Caseta">🛣️ Caseta</option>
+              <option value="Comida">🍔 Comida</option>
+              <option value="Hospedaje">🏨 Hospedaje</option>
+              <option value="Mantenimiento">🔧 Mantenimiento</option>
+              <option value="Otro">📝 Otro</option>
+            </select>
+            <input id="cost-amount-user" type="number" step="0.01" placeholder="$0.00" style="width:100px;padding:0.5rem;border:1px solid #2a2a5e;border-radius:8px;background:#0f0f23;color:#fff;font-size:0.85rem;">
+          </div>
+          <input id="cost-note-user" type="text" placeholder="Nota (opcional)" style="width:100%;margin-top:0.5rem;padding:0.5rem;border:1px solid #2a2a5e;border-radius:8px;background:#0f0f23;color:#fff;font-size:0.85rem;">
+          <button onclick="addMyTripCost(${t.id})" style="width:100%;margin-top:0.5rem;padding:0.6rem;background:#e94560;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Agregar gasto</button>
+        </div>
+      </div>
+    `;
+  } catch (err) {
+    container.style.display = 'none';
+  }
+}
+
+async function addMyTripCost(tripId) {
+  const type = document.getElementById('cost-type').value;
+  const amount = parseFloat(document.getElementById('cost-amount-user').value);
+  const note = document.getElementById('cost-note-user').value.trim();
+
+  if (isNaN(amount) || amount <= 0) {
+    updateStatus('Ingresa un monto válido', 'error');
+    return;
+  }
+
+  const concept = note ? `${type} - ${note}` : type;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/my-trips/${tripId}/costs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ concept, amount }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      updateStatus('Gasto agregado ✓', 'success');
+      document.getElementById('cost-amount-user').value = '';
+      document.getElementById('cost-note-user').value = '';
+      loadMyTrip(); // recargar
+    } else {
+      updateStatus('Error agregando gasto', 'error');
+    }
+  } catch (err) {
+    updateStatus('Error: ' + err.message, 'error');
+  }
+}
+
 // ============ MI HISTORIAL ============
 
 async function viewMyHistory() {
@@ -372,6 +479,13 @@ function updateStatus(message, type = 'info') {
   const el = document.getElementById('status');
   el.textContent = message;
   el.className = 'status status-' + type;
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
 
 function urlBase64ToUint8Array(base64String) {
