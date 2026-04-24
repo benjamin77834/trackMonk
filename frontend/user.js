@@ -98,6 +98,9 @@ function showRegistration() {
   document.getElementById('install-section').style.display = 'none';
   document.getElementById('registration-section').style.display = 'block';
   document.getElementById('registered-section').style.display = 'none';
+  // Mostrar tip de Firefox en Android
+  var tip = document.getElementById('android-firefox-tip');
+  if (tip && isAndroid()) tip.style.display = 'block';
 }
 
 async function showRegistered() {
