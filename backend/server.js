@@ -155,6 +155,22 @@ app.get('/api/devices', requireAdmin, async (req, res) => {
   }
 });
 
+// Eliminar dispositivo
+app.delete('/api/devices/:deviceId', requireAdmin, async (req, res) => {
+  const { deviceId } = req.params;
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    await conn.query('DELETE FROM devices WHERE id = ?', [deviceId]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error eliminando dispositivo:', err);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  } finally {
+    if (conn) conn.release();
+  }
+});
+
 // Buscar dispositivos por nombre, teléfono o empresa
 app.get('/api/devices/search', requireAdmin, async (req, res) => {
   const { q } = req.query;

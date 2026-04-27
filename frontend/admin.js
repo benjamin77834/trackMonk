@@ -106,12 +106,20 @@ async function loadDevices() {
             <button onclick="viewOnMap(${d.id})" class="btn btn-secondary btn-sm">🗺️ Mapa</button>
             <button onclick="viewHistory(${d.id})" class="btn btn-secondary btn-sm">📋</button>
             <button onclick="editDevice(${d.id})" class="btn btn-secondary btn-sm">✏️</button>
+            <button onclick="deleteDevice(${d.id},'${esc(d.person_name || d.device_name)}')" class="btn btn-danger btn-sm">🗑️</button>
           </div>
         </div>`;
     });
     if (allDevices.length === 0) list.innerHTML = '<div class="empty">No hay dispositivos registrados</div>';
     updateStatus(`${allDevices.length} dispositivos`, 'info');
   } catch (err) { updateStatus('Error cargando', 'error'); }
+}
+
+async function deleteDevice(id, name) {
+  if (!confirm('¿Eliminar "' + name + '" y todo su historial?')) return;
+  await af(`${API_BASE}/api/devices/${id}`, { method: 'DELETE' });
+  updateStatus('Dispositivo eliminado', 'success');
+  loadDevices();
 }
 
 async function editDevice(id) {
