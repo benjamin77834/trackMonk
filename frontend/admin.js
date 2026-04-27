@@ -537,6 +537,7 @@ async function viewTrip(tripId) {
       <button onclick="viewTripOnMap(${tripId});closeDetailDirect();" class="btn btn-accent2" style="width:100%;margin-top:0.5rem;">🗺️ Ver recorrido</button>
     </div>
   `);
+  window._currentTrip = t;
 }
 
 async function addCost(tripId) {
@@ -918,6 +919,70 @@ function esc(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+// ============ EXPORT CSV ============
+
+function downloadCSV(filename, csvContent) {
+  var blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+  var link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+}
+
+function exportTripCosts(tripId) {
+  var t = window._currentTrip;
+  if (!t) return;
+  var csv = 'Concepto,Fecha,Monto\n';
+  (t.costs || []).forEach(function(c) {
+    csv += '"' + (c.concept||'').replace(/"/g,'""') + '","' + new Date(c.created_at).toLocaleString('es-MX') + '",$' + parseFloat(c.amount).toFixed(2) + '\n';
+  });
+  csv += '\n,TOTAL,$' + parseFloat(t.total_cost || 0).toFixed(2) + '\n';
+  downloadCSV('gastos-viaje-' + tripId + '.csv', csv);
+}
+
+function exportTripFull(tripId) {
+  var t = window._currentTrip;
+  if (!t) return;
+  var csv = 'REPORTE DE VIAJE #' + t.id + '\n';
+  csv += 'Conductor,"' + (t.person_name || t.device_name) + '"\n';
+  csv += 'Vehículo,"' + (t.vehicle || '') + '"\n';
+  csv += 'Origen,"' + t.origin + '"\n';
+  csv += 'Destino,"' + t.destination + '"\n';
+  csv += 'Carga,"' + (t.cargo || '') + '"\n';
+  csv += 'Estado,' + t.status + '\n';
+  csv += 'Inicio,"' + new Date(t.started_at).toLocaleString('es-MX') + '"\n';
+  csv += 'Fin,"' + (t.completed_at ? new Date(t.completed_at).toLocaleString('es-MX') : 'En curso') + '"\n';
+  csv += 'Costo Total,$' + parseFloat(t.total_cost || 0).toFixed(2) + '\n';
+  csv += '\nGASTOS\nConcepto,Fecha,Monto\n';
+  (t.costs || []).forEach(function(c) {
+    csv += '"' + (c.concept||'').replace(/"/g,'""') + '","' + new Date(c.created_at).toLocaleString('es-MX') + '",$' + parseFloat(c.amount).toFixed(2) + '\n';
+  });
+  csv += '\nUBICACIONES\nLatitud,Longitud,Fecha\n';
+  (t.locations || []).forEach(function(l) {
+    csv += l.latitude + ',' + l.longitude + ',"' + new Date(l.recorded_at).toLocaleString('es-MX') + '"\n';
+  });
+  downloadCSV('reporte-viaje-' + tripId + '.csv', csv);
+}
+
+function exportAlerts() {
+  var typeLabels = { accident: 'Accidente', robbery: 'Robo/Asalto', breakdown: 'Avería', help: 'Auxilio', other: 'Otro' };
+  af(API_BASE + '/api/alerts?status=' + (document.getElementById('alert-filter').value || '')).then(function(r) { return r.json(); }).then(function(alerts) {
+    var csv = 'ID,Tipo,Persona,Teléfono,Vehículo,Mensaje,Latitud,Longitud,Estado,Fecha,Resuelto por\n';
+    alerts.forEach(function(a) {
+      csv += a.id + ',"' + (typeLabels[a.alert_type]||a.alert_type) + '","' + (a.person_name||a.device_name) + '","' + (a.phone||'') + '","' + (a.vehicle||'') + '","' + (a.message||'').replace(/"/g,'""') + '",' + (a.latitude||'') + ',' + (a.longitude||'') + ',' + a.status + ',"' + new Date(a.created_at).toLocaleString('es-MX') + '","' + (a.resolved_by||'') + '"\n';
+    });
+    downloadCSV('alertas.csv', csv);
+  });
+}
+
+function exportDevices() {
+  var csv = 'ID,Nombre,Persona,Teléfono,Vehículo,Empresa,Registrado\n';
+  allDevices.forEach(function(d) {
+    csv += d.id + ',"' + (d.device_name||'') + '","' + (d.person_name||'') + '","' + (d.phone||'') + '","' + (d.vehicle||'') + '","' + (d.company_name||'') + '","' + new Date(d.created_at).toLocaleString('es-MX') + '"\n';
+  });
+  downloadCSV('dispositivos.csv', csv);
 }
 
 document.addEventListener('DOMContentLoaded', init);

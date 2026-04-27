@@ -82,6 +82,7 @@
         <div class="toolbar">
           <button onclick="trackAll()" class="btn btn-danger">📍 Trackear todos</button>
           <button onclick="loadDevices()" class="btn btn-secondary">🔄 Refrescar</button>
+          <button onclick="exportDevices()" class="btn btn-secondary">📥 Exportar CSV</button>
         </div>
         <div id="devices-list" class="grid"></div>
       </section>
@@ -119,6 +120,7 @@
             <option value="resolved">Resueltas</option>
           </select>
           <button onclick="loadAlerts()" class="btn btn-secondary">🔄</button>
+          <button onclick="exportAlerts()" class="btn btn-secondary">📥 Exportar CSV</button>
         </div>
         <div id="alerts-list"></div>
       </section>
