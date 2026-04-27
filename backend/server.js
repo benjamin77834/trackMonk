@@ -186,13 +186,43 @@ app.delete('/api/users/:id', auth, superOnly, async (req, res) => {
   finally { if (conn) conn.release(); }
 });
 
+const fs = require('fs');
+const path = require('path');
+
 const AUTO_TRACK_KEY = process.env.AUTO_TRACK_KEY || 'trackmonk-auto-2026';
+const CONFIG_FILE = path.join(__dirname, 'config.json');
+
+function loadConfig() {
+  try { return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')); }
+  catch (e) { return { autoTrackEnabled: true, autoTrackInterval: 30 }; }
+}
+
+function saveConfig(cfg) {
+  fs.writeFileSync(CONFIG_FILE, JSON.stringify(cfg, null, 2));
+}
+
+// ============ CONFIG (super admin) ============
+
+app.get('/api/config', auth, superOnly, (req, res) => {
+  res.json(loadConfig());
+});
+
+app.put('/api/config', auth, superOnly, (req, res) => {
+  const cfg = loadConfig();
+  if (req.body.autoTrackEnabled !== undefined) cfg.autoTrackEnabled = req.body.autoTrackEnabled;
+  if (req.body.autoTrackInterval !== undefined) cfg.autoTrackInterval = parseInt(req.body.autoTrackInterval) || 30;
+  saveConfig(cfg);
+  res.json({ success: true, config: cfg });
+});
 
 // ============ AUTO TRACK (cron) ============
 
 app.post('/api/auto-track', async (req, res) => {
   const { key, companyId } = req.body;
   if (key !== AUTO_TRACK_KEY) return res.status(401).json({ error: 'No autorizado' });
+  // Verificar si está habilitado
+  const cfg = loadConfig();
+  if (!cfg.autoTrackEnabled) return res.json({ success: true, sent: 0, failed: 0, total: 0, skipped: true, reason: 'disabled' });
   let conn;
   try {
     conn = await pool.getConnection();

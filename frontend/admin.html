@@ -52,6 +52,9 @@
         <button class="nav-item nav-super" style="display:none;" onclick="navigate('users')">
           <span class="nav-icon">👥</span><span class="nav-label">Usuarios</span>
         </button>
+        <button class="nav-item nav-super" style="display:none;" onclick="navigate('settings')">
+          <span class="nav-icon">⚙️</span><span class="nav-label">Configuración</span>
+        </button>
       </div>
       <div class="sidebar-footer">
         <button onclick="adminLogout()" class="nav-item nav-logout">
@@ -144,6 +147,34 @@
           <button onclick="loadUsers()" class="btn btn-secondary">🔄</button>
         </div>
         <div id="users-list" class="grid"></div>
+      </section>
+
+      <!-- Page: Configuración (super admin) -->
+      <section id="page-settings" class="page">
+        <div class="card">
+          <h3>⚙️ Auto-Track</h3>
+          <p style="color:#666;font-size:0.85rem;margin-bottom:1rem;">Envía automáticamente solicitudes de ubicación a todos los dispositivos.</p>
+          <div class="form-group">
+            <label>Estado</label>
+            <select id="cfg-enabled" onchange="saveSettings()" style="padding:0.6rem;border:1px solid #e0e0e0;border-radius:8px;font-size:0.9rem;width:100%;">
+              <option value="true">✅ Activado</option>
+              <option value="false">❌ Desactivado</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Intervalo (minutos)</label>
+            <select id="cfg-interval" onchange="saveSettings()" style="padding:0.6rem;border:1px solid #e0e0e0;border-radius:8px;font-size:0.9rem;width:100%;">
+              <option value="5">Cada 5 minutos</option>
+              <option value="10">Cada 10 minutos</option>
+              <option value="15">Cada 15 minutos</option>
+              <option value="30">Cada 30 minutos</option>
+              <option value="60">Cada 1 hora</option>
+              <option value="120">Cada 2 horas</option>
+            </select>
+          </div>
+          <div id="cfg-status" style="margin-top:0.5rem;font-size:0.85rem;color:#666;"></div>
+          <button onclick="testAutoTrack()" class="btn btn-primary" style="margin-top:1rem;">🧪 Probar ahora</button>
+        </div>
       </section>
 
       <!-- Detail panel (modal) -->

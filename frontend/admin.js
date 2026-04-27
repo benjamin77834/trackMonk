@@ -68,13 +68,14 @@ function navigate(page) {
   event.currentTarget.classList.add('active');
   document.getElementById('page-' + page).classList.add('active');
   document.getElementById('page-title').textContent =
-    { devices: 'Dispositivos', map: 'Mapa', trips: 'Viajes', alerts: 'Alertas', search: 'Buscar', companies: 'Empresas', users: 'Usuarios' }[page];
+    { devices: 'Dispositivos', map: 'Mapa', trips: 'Viajes', alerts: 'Alertas', search: 'Buscar', companies: 'Empresas', users: 'Usuarios', settings: 'Configuración' }[page];
   closeDetailDirect();
   if (page === 'map') setTimeout(() => { initMap(); loadAllOnMap(); }, 100);
   if (page === 'trips') loadTrips();
   if (page === 'alerts') loadAlerts();
   if (page === 'companies') loadCompanies();
   if (page === 'users') loadUsers();
+  if (page === 'settings') loadSettings();
   // Close sidebar on mobile
   document.querySelector('.sidebar').classList.remove('open');
 }
@@ -714,6 +715,45 @@ function searchDevices() {
       </div>`;
     });
   }, 300);
+}
+
+// ============ SETTINGS ============
+
+async function loadSettings() {
+  try {
+    var res = await af(API_BASE + '/api/config');
+    var cfg = await res.json();
+    document.getElementById('cfg-enabled').value = String(cfg.autoTrackEnabled !== false);
+    document.getElementById('cfg-interval').value = String(cfg.autoTrackInterval || 30);
+    document.getElementById('cfg-status').textContent = 'Configuración cargada';
+  } catch (e) { document.getElementById('cfg-status').textContent = 'Error cargando'; }
+}
+
+async function saveSettings() {
+  var enabled = document.getElementById('cfg-enabled').value === 'true';
+  var interval = parseInt(document.getElementById('cfg-interval').value);
+  try {
+    await af(API_BASE + '/api/config', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ autoTrackEnabled: enabled, autoTrackInterval: interval }),
+    });
+    document.getElementById('cfg-status').textContent = '✅ Guardado — ' + (enabled ? 'Activo cada ' + interval + ' min' : 'Desactivado');
+    document.getElementById('cfg-status').style.color = enabled ? '#22c55e' : '#ef4444';
+  } catch (e) { document.getElementById('cfg-status').textContent = 'Error guardando'; }
+}
+
+async function testAutoTrack() {
+  document.getElementById('cfg-status').textContent = 'Enviando...';
+  try {
+    var res = await fetch(API_BASE + '/api/auto-track', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: 'trackmonk-auto-2026' }),
+    });
+    var data = await res.json();
+    if (data.skipped) { document.getElementById('cfg-status').textContent = '⚠️ Auto-track desactivado'; }
+    else { document.getElementById('cfg-status').textContent = '✅ Enviado: ' + data.sent + ' OK, ' + data.failed + ' fallidos de ' + data.total; }
+    document.getElementById('cfg-status').style.color = '#22c55e';
+  } catch (e) { document.getElementById('cfg-status').textContent = 'Error'; }
 }
 
 // ============ COMPANIES ============
