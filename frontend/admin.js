@@ -811,7 +811,7 @@ function showNewUserForm() {
       '<div class="form-group"><label>Usuario</label><input id="usr-username"></div>' +
       '<div class="form-group"><label>Contraseña</label><input id="usr-password" type="password"></div>' +
       '<div class="form-group"><label>Empresa</label><select id="usr-company">' + opts + '</select></div>' +
-      '<div class="form-group"><label>Rol</label><select id="usr-role"><option value="company_admin">Admin Empresa</option>' + (currentRole === 'super_admin' ? '<option value="super_admin">Super Admin</option>' : '') + '</select></div>' +
+      '<div class="form-group"><label>Rol</label><select id="usr-role"><option value="driver">Conductor</option><option value="company_admin">Admin Empresa</option>' + (currentRole === 'super_admin' ? '<option value="super_admin">Super Admin</option>' : '') + '</select></div>' +
       '<button onclick="createUser()" class="btn btn-primary" style="width:100%;margin-top:0.5rem;">Crear</button>');
   });
 }

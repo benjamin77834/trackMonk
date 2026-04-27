@@ -15,6 +15,21 @@
       <div id="status" class="status">Cargando...</div>
     </header>
 
+    <!-- Login del conductor -->
+    <section id="driver-login-section">
+      <div class="card" style="text-align:center;">
+        <h2>🐵 TrackMonk</h2>
+        <p style="color:#666; margin-bottom:1rem;">Ingresa tus credenciales</p>
+        <div class="form-group">
+          <input type="text" id="driver-username" placeholder="Usuario">
+        </div>
+        <div class="form-group">
+          <input type="password" id="driver-password" placeholder="Contraseña" onkeydown="if(event.key==='Enter')driverLogin()">
+        </div>
+        <button onclick="driverLogin()" class="btn btn-primary">Entrar</button>
+      </div>
+    </section>
+
     <!-- Instalar PWA -->
     <section id="install-section" style="display: none;">
       <div class="card">
@@ -95,6 +110,7 @@
         <p id="last-sent" style="color:#666; font-size:0.8rem; margin-top:0.5rem;"></p>
         <div id="my-history" style="display:none; margin-top:1rem; text-align:left;"></div>
         <button onclick="resetDevice()" class="btn btn-small" style="margin-top:1.5rem; font-size:0.75rem; color:#888;">🔄 Cambiar dispositivo / Re-registrar</button>
+        <button onclick="driverLogout()" class="btn btn-small" style="margin-top:0.5rem; font-size:0.75rem; color:#888;">🚪 Cerrar sesión</button>
       </div>
 
       <!-- Botón de instalar app (visible si no está instalada) -->

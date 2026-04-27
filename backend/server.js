@@ -58,6 +58,32 @@ function companyFilter(req) {
   return { sql: ' AND company_id = ?', params: [req.user.companyId] };
 }
 
+// Login para drivers (vista usuario)
+app.post('/api/auth/driver-login', async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) return res.status(400).json({ error: 'username y password requeridos' });
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const rows = await conn.query("SELECT u.*, c.slug as company_slug FROM users u LEFT JOIN companies c ON c.id=u.company_id WHERE u.username=? AND u.is_active=1", [username]);
+    if (rows.length === 0) return res.status(401).json({ error: 'Credenciales inválidas' });
+    const user = rows[0];
+    if (user.password_hash !== hashPass(password)) return res.status(401).json({ error: 'Credenciales inválidas' });
+    // Buscar si ya tiene dispositivo vinculado
+    const devices = await conn.query('SELECT id FROM devices WHERE user_id=?', [user.id]);
+    res.json({
+      success: true,
+      userId: user.id,
+      name: user.name,
+      role: user.role,
+      companyId: user.company_id,
+      companySlug: user.company_slug,
+      deviceId: devices.length > 0 ? devices[0].id : null,
+    });
+  } catch (err) { res.status(500).json({ error: 'Error interno' }); }
+  finally { if (conn) conn.release(); }
+});
+
 // ============ VAPID ============
 
 app.get('/api/vapid-public-key', (req, res) => {
@@ -159,32 +185,55 @@ app.delete('/api/users/:id', auth, superOnly, async (req, res) => {
 // ============ DEVICES ============
 
 app.post('/api/devices/register', async (req, res) => {
-  const { deviceName, subscription, companySlug } = req.body;
+  const { deviceName, subscription, companySlug, userId } = req.body;
   if (!deviceName) return res.status(400).json({ error: 'deviceName requerido' });
   let conn;
   try {
     conn = await pool.getConnection();
-    // Buscar empresa por slug
-    let companyId = 1; // default
+    let companyId = 1;
     if (companySlug) {
       const companies = await conn.query('SELECT id FROM companies WHERE slug = ?', [companySlug]);
       if (companies.length > 0) companyId = companies[0].id;
     }
+    // Si tiene userId, buscar dispositivo existente
+    if (userId) {
+      const existing = await conn.query('SELECT id FROM devices WHERE user_id=?', [userId]);
+      if (existing.length > 0) {
+        const did = existing[0].id;
+        if (subscription && subscription.endpoint) {
+          await conn.query('UPDATE devices SET device_name=?, endpoint=?, p256dh=?, auth=? WHERE id=?', [deviceName, subscription.endpoint, subscription.keys.p256dh, subscription.keys.auth, did]);
+        } else {
+          await conn.query('UPDATE devices SET device_name=? WHERE id=?', [deviceName, did]);
+        }
+        return res.json({ success: true, deviceId: did });
+      }
+    }
     if (subscription && subscription.endpoint) {
       const existing = await conn.query('SELECT id FROM devices WHERE endpoint = ?', [subscription.endpoint]);
       if (existing.length > 0) {
-        const deviceId = existing[0].id;
-        await conn.query('UPDATE devices SET device_name=?, p256dh=?, auth=? WHERE id=?',
-          [deviceName, subscription.keys.p256dh, subscription.keys.auth, deviceId]);
-        return res.json({ success: true, deviceId });
+        const did = existing[0].id;
+        await conn.query('UPDATE devices SET device_name=?, p256dh=?, auth=?, user_id=? WHERE id=?', [deviceName, subscription.keys.p256dh, subscription.keys.auth, userId || null, did]);
+        return res.json({ success: true, deviceId: did });
       }
-      const result = await conn.query('INSERT INTO devices (company_id, device_name, endpoint, p256dh, auth) VALUES (?, ?, ?, ?, ?)',
-        [companyId, deviceName, subscription.endpoint, subscription.keys.p256dh, subscription.keys.auth]);
+      const result = await conn.query("INSERT INTO devices (company_id, device_name, endpoint, p256dh, auth, user_id) VALUES (?, ?, ?, ?, ?, ?)", [companyId, deviceName, subscription.endpoint, subscription.keys.p256dh, subscription.keys.auth, userId || null]);
       return res.json({ success: true, deviceId: Number(result.insertId) });
     }
-    const result = await conn.query("INSERT INTO devices (company_id, device_name, endpoint, p256dh, auth) VALUES (?, ?, '', '', '')", [companyId, deviceName]);
+    const result = await conn.query("INSERT INTO devices (company_id, device_name, endpoint, p256dh, auth, user_id) VALUES (?, ?, '', '', '', ?)", [companyId, deviceName, userId || null]);
     res.json({ success: true, deviceId: Number(result.insertId) });
   } catch (err) { console.error(err); res.status(500).json({ error: 'Error interno' }); }
+  finally { if (conn) conn.release(); }
+});
+
+// Actualizar perfil desde el usuario (público)
+app.put('/api/devices/:id/profile', async (req, res) => {
+  const { device_name, person_name, phone, company, vehicle } = req.body;
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    await conn.query('UPDATE devices SET device_name=?, person_name=?, phone=?, vehicle=? WHERE id=?',
+      [device_name||'', person_name||'', phone||'', vehicle||'', req.params.id]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: 'Error interno' }); }
   finally { if (conn) conn.release(); }
 });
 

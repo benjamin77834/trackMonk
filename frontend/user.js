@@ -1,240 +1,159 @@
-let deviceId = localStorage.getItem('deviceId');
-let pushSubscription = null;
-let hasPush = ('PushManager' in window);
-let isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-let deferredPrompt = null; // Para el prompt nativo de instalación en Android/Chrome
+var deviceId = localStorage.getItem('deviceId');
+var driverUserId = localStorage.getItem('driverUserId');
+var driverCompanySlug = localStorage.getItem('driverCompanySlug');
+var pushSubscription = null;
+var hasPush = ('PushManager' in window);
+var isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+var deferredPrompt = null;
 
-function isIOS() {
-  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-}
+function isIOS() { return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
+function isAndroid() { return /Android/.test(navigator.userAgent); }
 
-function isAndroid() {
-  return /Android/.test(navigator.userAgent);
-}
-
-function getPlatform() {
-  if (isIOS()) return 'ios';
-  if (isAndroid()) return 'android';
-  return 'desktop';
-}
-
-// Capturar el evento beforeinstallprompt (Chrome/Edge/Android)
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  deferredPrompt = e;
-  // Si estamos en la pantalla de instalación, mostrar el botón nativo
-  const nativeBtn = document.getElementById('install-native-btn');
-  if (nativeBtn) nativeBtn.style.display = 'block';
-});
+window.addEventListener('beforeinstallprompt', function(e) { e.preventDefault(); deferredPrompt = e; });
 
 // ============ INIT ============
 
 async function init() {
   updateStatus('Inicializando...');
+  if (!driverUserId) { showDriverLogin(); return; }
 
   if ('serviceWorker' in navigator) {
     try {
-      const registration = await navigator.serviceWorker.register('/sw.js');
+      await navigator.serviceWorker.register('/sw.js');
       navigator.serviceWorker.addEventListener('message', handleSWMessage);
-      if (hasPush) {
-        pushSubscription = await registration.pushManager.getSubscription();
-      }
-    } catch (e) {
-      console.warn('SW error:', e);
-    }
+      if (hasPush) { var reg = await navigator.serviceWorker.ready; pushSubscription = await reg.pushManager.getSubscription(); }
+    } catch (e) {}
   }
 
-  if (deviceId) {
-    showRegistered();
-    // Mostrar banner de instalación si no está instalada como PWA
-    if (!isStandalone) showInstallBanner();
-  } else {
-    // Si es iOS sin PWA y sin push, mostrar instrucciones completas primero
-    if (isIOS() && !isStandalone && !hasPush) {
-      showInstallPrompt();
-      return;
-    }
-    showRegistration();
-    updateStatus('Registra tu dispositivo para comenzar');
-    // Mostrar banner de instalación
-    if (!isStandalone) showInstallBanner();
-  }
+  if (deviceId) { showRegistered(); }
+  else { showRegistration(); updateStatus('Registra tu dispositivo'); }
 }
 
-function showInstallBanner() {
-  const banner = document.getElementById('install-banner');
-  if (banner) banner.style.display = 'block';
+// ============ DRIVER LOGIN ============
+
+function showDriverLogin() {
+  document.getElementById('driver-login-section').style.display = 'block';
+  document.getElementById('install-section').style.display = 'none';
+  document.getElementById('registration-section').style.display = 'none';
+  document.getElementById('registered-section').style.display = 'none';
+  updateStatus('');
 }
 
-async function nativeInstall() {
-  const prompt = deferredPrompt || window._deferredPrompt;
-  if (!prompt) return;
-  prompt.prompt();
-  const result = await prompt.userChoice;
-  deferredPrompt = null;
-  window._deferredPrompt = null;
-  if (result.outcome === 'accepted') {
-    updateStatus('App instalada ✓', 'success');
-    document.getElementById('install-banner').style.display = 'none';
-  }
+async function driverLogin() {
+  var username = document.getElementById('driver-username').value.trim();
+  var password = document.getElementById('driver-password').value;
+  if (!username || !password) { updateStatus('Ingresa usuario y contraseña', 'error'); return; }
+  updateStatus('Verificando...');
+  try {
+    var res = await fetch(API_BASE + '/api/auth/driver-login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: username, password: password }),
+    });
+    var data = await res.json();
+    if (data.success) {
+      driverUserId = String(data.userId);
+      driverCompanySlug = data.companySlug || '';
+      localStorage.setItem('driverUserId', driverUserId);
+      localStorage.setItem('driverCompanySlug', driverCompanySlug);
+      if (data.deviceId) { deviceId = String(data.deviceId); localStorage.setItem('deviceId', deviceId); }
+      document.getElementById('driver-login-section').style.display = 'none';
+      if ('serviceWorker' in navigator) { try { await navigator.serviceWorker.register('/sw.js'); navigator.serviceWorker.addEventListener('message', handleSWMessage); } catch(e){} }
+      if (deviceId) { showRegistered(); } else { showRegistration(); updateStatus('Registra tu dispositivo'); }
+    } else { updateStatus('Credenciales inválidas', 'error'); }
+  } catch (err) { updateStatus('Error de conexión', 'error'); }
 }
+
+function driverLogout() {
+  localStorage.clear(); deviceId = null; driverUserId = null; driverCompanySlug = null;
+  caches.delete('app-data').catch(function(){}); showDriverLogin();
+}
+
+// ============ INSTALL ============
 
 function showInstallPrompt() {
-  // Solo bloquear en iOS sin PWA (donde push no funciona sin instalar)
   if (isIOS()) {
     document.getElementById('install-section').style.display = 'block';
     document.getElementById('registration-section').style.display = 'none';
     document.getElementById('registered-section').style.display = 'none';
     document.getElementById('install-ios').style.display = 'block';
-    updateStatus('Instala la app para recibir notificaciones', 'warning');
-  } else {
-    // Android/Desktop: ir directo al registro, push funciona sin instalar
-    showRegistration();
-    updateStatus('Registra tu dispositivo para comenzar');
-  }
+    updateStatus('Instala la app para notificaciones', 'warning');
+  } else { showRegistration(); }
 }
 
 function showRegistration() {
+  document.getElementById('driver-login-section').style.display = 'none';
   document.getElementById('install-section').style.display = 'none';
   document.getElementById('registration-section').style.display = 'block';
   document.getElementById('registered-section').style.display = 'none';
-  // Mostrar tip de Firefox en Android
   var tip = document.getElementById('android-firefox-tip');
   if (tip && isAndroid()) tip.style.display = 'block';
 }
 
 async function showRegistered() {
+  document.getElementById('driver-login-section').style.display = 'none';
   document.getElementById('install-section').style.display = 'none';
   document.getElementById('registration-section').style.display = 'none';
   document.getElementById('registered-section').style.display = 'block';
 
-  // Cargar datos del dispositivo
   try {
-    const res = await fetch(`${API_BASE}/api/devices/${deviceId}`);
-    const d = await res.json();
-    if (d) {
-      document.getElementById('registered-name').textContent =
-        `${d.person_name || d.device_name} — ${d.phone || ''}`;
-    }
-  } catch (e) { /* ignore */ }
+    var res = await fetch(API_BASE + '/api/devices/' + deviceId);
+    var d = await res.json();
+    if (d) document.getElementById('registered-name').textContent = (d.person_name || d.device_name) + ' — ' + (d.phone || '');
+  } catch (e) {}
 
-  // Verificar si tiene push activo
-  let hasPushActive = false;
+  var hasPushActive = false;
   if (hasPush && 'serviceWorker' in navigator) {
-    try {
-      const reg = await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.getSubscription();
-      hasPushActive = !!sub;
-    } catch (e) { /* ignore */ }
+    try { var reg = await navigator.serviceWorker.ready; hasPushActive = !!(await reg.pushManager.getSubscription()); } catch(e){}
   }
-
-  const pushBtn = document.getElementById('activate-push-btn');
-  if (pushBtn) {
-    pushBtn.style.display = hasPushActive ? 'none' : 'block';
-  }
-
+  var pushBtn = document.getElementById('activate-push-btn');
+  if (pushBtn) pushBtn.style.display = hasPushActive ? 'none' : 'block';
   updateStatus(hasPushActive ? 'Dispositivo activo con push ✓' : 'Dispositivo activo (sin push)', hasPushActive ? 'success' : 'warning');
 
-  // Cargar viaje activo
   loadMyTrip();
-
-  // Cargar mensajes no leídos
   loadUnreadCount();
-
-  // Mostrar botón de instalar si no está como PWA
-  if (!isStandalone) {
-    const installCard = document.getElementById('install-app-card');
-    const installHint = document.getElementById('install-app-hint');
-    if (installCard) {
-      installCard.style.display = 'block';
-      if (isIOS()) {
-        installHint.innerHTML = 'En Safari: toca <strong>Compartir</strong> (📤) → <strong>Agregar a inicio</strong>';
-      } else if (isAndroid()) {
-        installHint.innerHTML = 'Se agregará un ícono en tu pantalla de inicio';
-      } else {
-        installHint.innerHTML = 'Se abrirá como aplicación independiente';
-      }
-    }
-  }
 }
 
 // ============ REGISTRO ============
 
 async function registerDevice() {
-  const deviceName = document.getElementById('reg-device-name').value.trim();
-  const personName = document.getElementById('reg-person-name').value.trim();
-  const phone = document.getElementById('reg-phone').value.trim();
-  const company = document.getElementById('reg-company').value.trim();
-  const vehicle = document.getElementById('reg-vehicle').value.trim();
-
-  if (!deviceName) {
-    updateStatus('Ingresa un nombre para el dispositivo', 'error');
-    return;
-  }
-
+  var deviceName = document.getElementById('reg-device-name').value.trim();
+  var personName = document.getElementById('reg-person-name').value.trim();
+  var phone = document.getElementById('reg-phone').value.trim();
+  var company = document.getElementById('reg-company').value.trim();
+  var vehicle = document.getElementById('reg-vehicle').value.trim();
+  if (!deviceName) { updateStatus('Ingresa nombre del dispositivo', 'error'); return; }
   updateStatus('Registrando...');
-
   try {
-    // Pedir ubicación
-    try {
-      await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 });
-      });
-    } catch (e) {
-      updateStatus('Necesitas permitir acceso a ubicación', 'error');
-      return;
-    }
-
-    let subscription = null;
-
+    try { await new Promise(function(ok, fail) { navigator.geolocation.getCurrentPosition(ok, fail, { enableHighAccuracy: true, timeout: 10000 }); }); } catch(e) { updateStatus('Permite acceso a ubicación', 'error'); return; }
+    var subscription = null;
     if (hasPush && 'serviceWorker' in navigator) {
       try {
-        const vapidRes = await fetch(`${API_BASE}/api/vapid-public-key`);
-        const { publicKey } = await vapidRes.json();
-
-        const permission = await Notification.requestPermission();
+        var vapidRes = await fetch(API_BASE + '/api/vapid-public-key'); var vk = await vapidRes.json();
+        var permission = await Notification.requestPermission();
         if (permission === 'granted') {
-          const registration = await navigator.serviceWorker.ready;
-          pushSubscription = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(publicKey),
-          });
+          var reg = await navigator.serviceWorker.ready;
+          pushSubscription = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(vk.publicKey) });
           subscription = pushSubscription.toJSON();
         }
-      } catch (e) {
-        console.warn('Push no disponible:', e);
-      }
+      } catch(e) {}
     }
-
-    const res = await fetch(`${API_BASE}/api/devices/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ deviceName, subscription }),
+    var res = await fetch(API_BASE + '/api/devices/register', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deviceName: deviceName, subscription: subscription, companySlug: driverCompanySlug, userId: driverUserId }),
     });
-    const data = await res.json();
-
+    var data = await res.json();
     if (data.success) {
-      deviceId = String(data.deviceId);
-      localStorage.setItem('deviceId', deviceId);
+      deviceId = String(data.deviceId); localStorage.setItem('deviceId', deviceId);
       await saveDeviceIdToCache(deviceId);
-
-      // Guardar perfil
       if (personName || phone || company || vehicle) {
-        await fetch(`${API_BASE}/api/devices/${deviceId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ device_name: deviceName, person_name: personName, phone, company, vehicle }),
+        await fetch(API_BASE + '/api/devices/' + deviceId + '/profile', {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ device_name: deviceName, person_name: personName, phone: phone, company: company, vehicle: vehicle }),
         });
       }
-
-      sendMyLocation();
-      showRegistered();
-    } else {
-      updateStatus('Error: ' + (data.error || 'desconocido'), 'error');
-    }
-  } catch (err) {
-    updateStatus('Error: ' + err.message, 'error');
-  }
+      sendMyLocation(); showRegistered();
+    } else { updateStatus('Error: ' + (data.error || ''), 'error'); }
+  } catch (err) { updateStatus('Error: ' + err.message, 'error'); }
 }
 
 // ============ ACTIVAR PUSH ============
@@ -242,40 +161,20 @@ async function registerDevice() {
 async function activatePush() {
   updateStatus('Activando notificaciones...');
   try {
-    if (!('serviceWorker' in navigator) || !hasPush) {
-      updateStatus('Tu navegador no soporta push. Instala la app como PWA.', 'error');
-      return;
-    }
-
-    const vapidRes = await fetch(`${API_BASE}/api/vapid-public-key`);
-    const { publicKey } = await vapidRes.json();
-
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
-      updateStatus('Necesitas permitir notificaciones', 'error');
-      return;
-    }
-
-    const registration = await navigator.serviceWorker.ready;
-    pushSubscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(publicKey),
+    if (!('serviceWorker' in navigator) || !hasPush) { updateStatus('Tu navegador no soporta push', 'error'); return; }
+    var vapidRes = await fetch(API_BASE + '/api/vapid-public-key'); var vk = await vapidRes.json();
+    var permission = await Notification.requestPermission();
+    if (permission !== 'granted') { updateStatus('Permite notificaciones', 'error'); return; }
+    var reg = await navigator.serviceWorker.ready;
+    pushSubscription = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(vk.publicKey) });
+    await fetch(API_BASE + '/api/devices/' + deviceId + '/push', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subscription: pushSubscription.toJSON() }),
     });
-
-    // Actualizar la suscripción en el dispositivo existente
-    const sub = pushSubscription.toJSON();
-    await fetch(`${API_BASE}/api/devices/${deviceId}/push`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subscription: sub }),
-    });
-
     updateStatus('Push activado ✓', 'success');
-    const pushBtn = document.getElementById('activate-push-btn');
+    var pushBtn = document.getElementById('activate-push-btn');
     if (pushBtn) pushBtn.style.display = 'none';
-  } catch (err) {
-    updateStatus('Error activando push: ' + err.message, 'error');
-  }
+  } catch (err) { updateStatus('Error: ' + err.message, 'error'); }
 }
 
 // ============ ENVIAR UBICACIÓN ============
@@ -283,52 +182,14 @@ async function activatePush() {
 async function sendMyLocation() {
   if (!deviceId) return;
   try {
-    const position = await new Promise((resolve, reject) => {
-      navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
-    });
-    await fetch(`${API_BASE}/api/location`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        deviceId, latitude: position.coords.latitude,
-        longitude: position.coords.longitude, accuracy: position.coords.accuracy,
-      }),
+    var position = await new Promise(function(ok, fail) { navigator.geolocation.getCurrentPosition(ok, fail, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }); });
+    await fetch(API_BASE + '/api/location', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deviceId: deviceId, latitude: position.coords.latitude, longitude: position.coords.longitude, accuracy: position.coords.accuracy }),
     });
     updateStatus('Ubicación enviada ✓', 'success');
     document.getElementById('last-sent').textContent = 'Última: ' + new Date().toLocaleString();
-  } catch (err) {
-    updateStatus('Error enviando ubicación: ' + err.message, 'error');
-  }
-}
-
-// ============ SERVICE WORKER ============
-
-function handleSWMessage(event) {
-  const data = event.data;
-  if (data.type === 'get-device-id') {
-    event.ports[0].postMessage({ deviceId });
-  }
-  if (data.type === 'get-location') {
-    getLocationAndSend(data.requestId, data.deviceId);
-  }
-}
-
-async function getLocationAndSend(requestId, devId) {
-  try {
-    const position = await new Promise((resolve, reject) => {
-      navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
-    });
-    await fetch(`${API_BASE}/api/location`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        deviceId: devId || deviceId, requestId,
-        latitude: position.coords.latitude, longitude: position.coords.longitude, accuracy: position.coords.accuracy,
-      }),
-    });
-  } catch (err) {
-    console.error('Error enviando ubicación:', err);
-  }
+  } catch (err) { updateStatus('Error: ' + err.message, 'error'); }
 }
 
 // ============ EMERGENCIA ============
@@ -336,365 +197,147 @@ async function getLocationAndSend(requestId, devId) {
 function showEmergencyPanel() {
   var panel = document.getElementById('emergency-panel');
   if (panel.style.display === 'block') { panel.style.display = 'none'; return; }
-
   panel.style.display = 'block';
-  panel.innerHTML = '\
-    <div style="background:#fff;border:2px solid #ef4444;border-radius:12px;padding:1rem;">\
-      <h3 style="color:#ef4444;text-align:center;margin-bottom:0.75rem;">🚨 Selecciona el tipo de emergencia</h3>\
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">\
-        <button onclick="sendAlert(\'accident\')" style="padding:1rem;background:#fee2e2;border:1px solid #fca5a5;border-radius:10px;cursor:pointer;font-size:0.9rem;font-weight:600;color:#991b1b;">🚗💥<br>Accidente</button>\
-        <button onclick="sendAlert(\'robbery\')" style="padding:1rem;background:#fef9c3;border:1px solid #fde047;border-radius:10px;cursor:pointer;font-size:0.9rem;font-weight:600;color:#854d0e;">🔫<br>Robo / Asalto</button>\
-        <button onclick="sendAlert(\'breakdown\')" style="padding:1rem;background:#dbeafe;border:1px solid #93c5fd;border-radius:10px;cursor:pointer;font-size:0.9rem;font-weight:600;color:#1e40af;">🔧<br>Avería</button>\
-        <button onclick="sendAlert(\'help\')" style="padding:1rem;background:#fce7f3;border:1px solid #f9a8d4;border-radius:10px;cursor:pointer;font-size:0.9rem;font-weight:600;color:#9d174d;">🆘<br>Auxilio</button>\
-      </div>\
-      <div style="margin-top:0.75rem;">\
-        <input id="alert-message" type="text" placeholder="Mensaje adicional (opcional)" style="width:100%;padding:0.6rem;border:1px solid #e0e0e0;border-radius:8px;font-size:0.9rem;">\
-      </div>\
-      <button onclick="document.getElementById(\'emergency-panel\').style.display=\'none\'" style="width:100%;margin-top:0.5rem;padding:0.5rem;background:#f0f0f0;border:none;border-radius:8px;color:#666;cursor:pointer;">Cancelar</button>\
-    </div>';
+  panel.innerHTML = '<div style="background:#fff;border:2px solid #ef4444;border-radius:12px;padding:1rem;"><h3 style="color:#ef4444;text-align:center;margin-bottom:0.75rem;">🚨 Tipo de emergencia</h3><div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;"><button onclick="sendAlert(\'accident\')" style="padding:1rem;background:#fee2e2;border:1px solid #fca5a5;border-radius:10px;cursor:pointer;font-weight:600;color:#991b1b;">🚗💥<br>Accidente</button><button onclick="sendAlert(\'robbery\')" style="padding:1rem;background:#fef9c3;border:1px solid #fde047;border-radius:10px;cursor:pointer;font-weight:600;color:#854d0e;">🔫<br>Robo</button><button onclick="sendAlert(\'breakdown\')" style="padding:1rem;background:#dbeafe;border:1px solid #93c5fd;border-radius:10px;cursor:pointer;font-weight:600;color:#1e40af;">🔧<br>Avería</button><button onclick="sendAlert(\'help\')" style="padding:1rem;background:#fce7f3;border:1px solid #f9a8d4;border-radius:10px;cursor:pointer;font-weight:600;color:#9d174d;">🆘<br>Auxilio</button></div><input id="alert-message" type="text" placeholder="Mensaje (opcional)" style="width:100%;margin-top:0.75rem;padding:0.6rem;border:1px solid #e0e0e0;border-radius:8px;"><button onclick="document.getElementById(\'emergency-panel\').style.display=\'none\'" style="width:100%;margin-top:0.5rem;padding:0.5rem;background:#f0f0f0;border:none;border-radius:8px;color:#666;cursor:pointer;">Cancelar</button></div>';
 }
 
 async function sendAlert(alertType) {
-  updateStatus('Enviando alerta de emergencia...', 'warning');
-
+  updateStatus('Enviando alerta...', 'warning');
   try {
-    var position = await new Promise(function(resolve, reject) {
-      navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
-    });
-
-    var msg = document.getElementById('alert-message');
-    var message = msg ? msg.value.trim() : '';
-
-    var res = await fetch(API_BASE + '/api/alerts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        deviceId: deviceId,
-        alert_type: alertType,
-        message: message,
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-        accuracy: position.coords.accuracy,
-      }),
-    });
-
-    var data = await res.json();
-    if (data.success) {
-      updateStatus('🚨 Alerta enviada — ayuda en camino', 'error');
-      document.getElementById('emergency-panel').style.display = 'none';
-    } else {
-      updateStatus('Error enviando alerta', 'error');
-    }
+    var position = await new Promise(function(ok, fail) { navigator.geolocation.getCurrentPosition(ok, fail, { enableHighAccuracy: true, timeout: 10000 }); });
+    var msg = document.getElementById('alert-message'); var message = msg ? msg.value.trim() : '';
+    await fetch(API_BASE + '/api/alerts', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deviceId: deviceId, alert_type: alertType, message: message, latitude: position.coords.latitude, longitude: position.coords.longitude, accuracy: position.coords.accuracy }) });
+    updateStatus('🚨 Alerta enviada', 'error'); document.getElementById('emergency-panel').style.display = 'none';
   } catch (err) {
-    // Si no puede obtener ubicación, enviar sin ella
-    try {
-      var msg2 = document.getElementById('alert-message');
-      await fetch(API_BASE + '/api/alerts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          deviceId: deviceId,
-          alert_type: alertType,
-          message: msg2 ? msg2.value.trim() : '',
-        }),
-      });
-      updateStatus('🚨 Alerta enviada (sin ubicación)', 'error');
-      document.getElementById('emergency-panel').style.display = 'none';
-    } catch (e) {
-      updateStatus('Error: ' + e.message, 'error');
-    }
+    try { await fetch(API_BASE + '/api/alerts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ deviceId: deviceId, alert_type: alertType }) });
+      updateStatus('🚨 Alerta enviada (sin ubicación)', 'error'); document.getElementById('emergency-panel').style.display = 'none';
+    } catch(e) { updateStatus('Error', 'error'); }
   }
 }
 
-// ============ MIS NOTIFICACIONES ============
+// ============ NOTIFICACIONES ============
 
 async function loadUnreadCount() {
   if (!deviceId) return;
-  try {
-    const res = await fetch(`${API_BASE}/api/my-messages/${deviceId}/unread`);
-    const data = await res.json();
-    const badge = document.getElementById('unread-badge');
-    if (badge && data.count > 0) {
-      badge.textContent = data.count;
-      badge.style.display = 'inline';
-    } else if (badge) {
-      badge.style.display = 'none';
-    }
-  } catch (e) { /* ignore */ }
+  try { var res = await fetch(API_BASE + '/api/my-messages/' + deviceId + '/unread'); var data = await res.json();
+    var badge = document.getElementById('unread-badge');
+    if (badge && data.count > 0) { badge.textContent = data.count; badge.style.display = 'inline'; }
+    else if (badge) { badge.style.display = 'none'; }
+  } catch(e) {}
 }
 
 async function viewMyMessages() {
-  const container = document.getElementById('my-messages');
-  if (container.style.display === 'block') { container.style.display = 'none'; return; }
-
-  container.style.display = 'block';
-  container.innerHTML = '<p style="color:#888; text-align:center;">Cargando...</p>';
-
+  var c = document.getElementById('my-messages');
+  if (c.style.display === 'block') { c.style.display = 'none'; return; }
+  c.style.display = 'block'; c.innerHTML = '<p style="color:#888;text-align:center;">Cargando...</p>';
   try {
-    const res = await fetch(`${API_BASE}/api/my-messages/${deviceId}`);
-    const messages = await res.json();
-
-    if (messages.length === 0) {
-      container.innerHTML = '<div style="background:#fff;border:1px solid #e0e0e0;border-radius:12px;padding:1.5rem;text-align:center;color:#aaa;">No hay notificaciones</div>';
-      return;
-    }
-
-    let html = '<div style="background:#fff;border:1px solid #e0e0e0;border-radius:12px;padding:1rem;">';
-    html += '<h3 style="font-size:1rem;margin-bottom:0.75rem;color:#1a1a1a;">🔔 Notificaciones</h3>';
-
-    messages.forEach(function(m) {
-      var date = new Date(m.created_at);
-      var isUnread = !m.is_read;
-      html += '<div style="padding:0.75rem;margin-bottom:0.5rem;border-radius:8px;border:1px solid ' + (isUnread ? '#22c55e' : '#e0e0e0') + ';background:' + (isUnread ? '#dcfce7' : '#f9f9f9') + ';" onclick="markRead(' + m.id + ', this)">';
-      html += '<div style="display:flex;justify-content:space-between;align-items:center;">';
-      html += '<strong style="font-size:0.9rem;color:#1a1a1a;">' + (isUnread ? '🟢 ' : '') + escapeHtml(m.title) + '</strong>';
-      html += '<span style="font-size:0.7rem;color:#999;">' + date.toLocaleDateString('es-MX', {day:'numeric',month:'short'}) + ' ' + date.toLocaleTimeString('es-MX', {hour:'2-digit',minute:'2-digit'}) + '</span>';
-      html += '</div>';
-      html += '<p style="font-size:0.85rem;color:#444;margin-top:0.25rem;">' + escapeHtml(m.body) + '</p>';
-      html += '</div>';
+    var res = await fetch(API_BASE + '/api/my-messages/' + deviceId); var messages = await res.json();
+    if (!messages.length) { c.innerHTML = '<div style="background:#fff;border:1px solid #e0e0e0;border-radius:12px;padding:1.5rem;text-align:center;color:#aaa;">Sin notificaciones</div>'; return; }
+    var html = '<div style="background:#fff;border:1px solid #e0e0e0;border-radius:12px;padding:1rem;"><h3 style="font-size:1rem;margin-bottom:0.75rem;">🔔 Notificaciones</h3>';
+    messages.forEach(function(m) { var d = new Date(m.created_at); var u = !m.is_read;
+      html += '<div style="padding:0.75rem;margin-bottom:0.5rem;border-radius:8px;border:1px solid ' + (u?'#22c55e':'#e0e0e0') + ';background:' + (u?'#dcfce7':'#f9f9f9') + ';"><div style="display:flex;justify-content:space-between;"><strong style="font-size:0.9rem;">' + (u?'🟢 ':'') + escapeHtml(m.title) + '</strong><span style="font-size:0.7rem;color:#999;">' + d.toLocaleDateString('es-MX',{day:'numeric',month:'short'}) + '</span></div><p style="font-size:0.85rem;color:#444;margin-top:0.25rem;">' + escapeHtml(m.body) + '</p></div>';
     });
-
-    html += '</div>';
-    container.innerHTML = html;
-
-    // Marcar todos como leídos
-    messages.filter(function(m) { return !m.is_read; }).forEach(function(m) {
-      fetch(API_BASE + '/api/my-messages/' + m.id + '/read', { method: 'PUT' });
-    });
-    setTimeout(function() {
-      var badge = document.getElementById('unread-badge');
-      if (badge) badge.style.display = 'none';
-    }, 1000);
-  } catch (err) {
-    container.innerHTML = '<p style="color:#ef4444;text-align:center;">Error cargando notificaciones</p>';
-  }
+    html += '</div>'; c.innerHTML = html;
+    messages.filter(function(m){return !m.is_read;}).forEach(function(m){ fetch(API_BASE+'/api/my-messages/'+m.id+'/read',{method:'PUT'}); });
+    setTimeout(function(){ var b=document.getElementById('unread-badge'); if(b) b.style.display='none'; }, 1000);
+  } catch(e) { c.innerHTML = '<p style="color:#ef4444;text-align:center;">Error</p>'; }
 }
 
-function markRead(messageId, el) {
-  fetch(API_BASE + '/api/my-messages/' + messageId + '/read', { method: 'PUT' });
-  el.style.background = '#f9f9f9';
-  el.style.borderColor = '#e0e0e0';
-}
-
-// ============ MI VIAJE ACTIVO ============
+// ============ MI VIAJE ============
 
 async function loadMyTrip() {
   if (!deviceId) return;
-  const container = document.getElementById('my-trip');
+  var c = document.getElementById('my-trip');
   try {
-    const res = await fetch(`${API_BASE}/api/my-trips/${deviceId}`);
-    const trips = await res.json();
-
-    if (trips.length === 0) {
-      container.style.display = 'none';
-      return;
-    }
-
-    container.style.display = 'block';
-    const t = trips[0]; // viaje activo más reciente
-
-    // Cargar costos
-    const costsRes = await fetch(`${API_BASE}/api/my-trips/${t.id}/costs`);
-    const costs = await costsRes.json();
-    const totalCost = costs.reduce((sum, c) => sum + parseFloat(c.amount), 0);
-
-    let costsHtml = '';
-    if (costs.length > 0) {
-      costsHtml = '<div style="margin-top:0.5rem;">';
-      costs.forEach(c => {
-        costsHtml += `<div style="display:flex;justify-content:space-between;padding:0.3rem 0;border-bottom:1px solid #1a1a4e;font-size:0.8rem;">
-          <span>${escapeHtml(c.concept)}</span><span>$${parseFloat(c.amount).toFixed(2)}</span>
-        </div>`;
-      });
-      costsHtml += '</div>';
-    }
-
-    container.innerHTML = `
-      <div style="background:#16213e;border:1px solid #1a1a4e;border-radius:12px;padding:1rem;">
-        <h3 style="color:#fff;font-size:1rem;margin-bottom:0.5rem;">🚛 Viaje activo</h3>
-        <div style="display:flex;align-items:center;gap:0.5rem;margin:0.5rem 0;">
-          <span style="width:10px;height:10px;border-radius:50%;background:#22c55e;"></span>
-          <span style="font-size:0.85rem;">${escapeHtml(t.origin)}</span>
-          <span style="flex:1;height:2px;background:#252550;"></span>
-          <span style="font-size:0.85rem;">${escapeHtml(t.destination)}</span>
-          <span style="width:10px;height:10px;border-radius:50%;background:#e94560;"></span>
-        </div>
-        ${t.cargo ? `<div style="font-size:0.8rem;color:#888;">📦 ${escapeHtml(t.cargo)}</div>` : ''}
-        <div style="text-align:center;margin:0.75rem 0;padding:0.75rem;background:#0f0f23;border-radius:8px;">
-          <div style="font-size:0.75rem;color:#888;">Gastos totales</div>
-          <div style="font-size:1.3rem;font-weight:700;color:#fff;">$${totalCost.toLocaleString('es-MX', {minimumFractionDigits:2})}</div>
-        </div>
-        ${costsHtml}
-        <div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid #1a1a4e;">
-          <div style="font-size:0.85rem;color:#fff;margin-bottom:0.5rem;">Agregar gasto</div>
-          <div style="display:flex;gap:0.5rem;">
-            <select id="cost-type" style="flex:1;padding:0.5rem;border:1px solid #2a2a5e;border-radius:8px;background:#0f0f23;color:#fff;font-size:0.85rem;">
-              <option value="Gasolina">⛽ Gasolina</option>
-              <option value="Caseta">🛣️ Caseta</option>
-              <option value="Comida">🍔 Comida</option>
-              <option value="Hospedaje">🏨 Hospedaje</option>
-              <option value="Mantenimiento">🔧 Mantenimiento</option>
-              <option value="Otro">📝 Otro</option>
-            </select>
-            <input id="cost-amount-user" type="number" step="0.01" placeholder="$0.00" style="width:100px;padding:0.5rem;border:1px solid #2a2a5e;border-radius:8px;background:#0f0f23;color:#fff;font-size:0.85rem;">
-          </div>
-          <input id="cost-note-user" type="text" placeholder="Nota (opcional)" style="width:100%;margin-top:0.5rem;padding:0.5rem;border:1px solid #2a2a5e;border-radius:8px;background:#0f0f23;color:#fff;font-size:0.85rem;">
-          <button onclick="addMyTripCost(${t.id})" style="width:100%;margin-top:0.5rem;padding:0.6rem;background:#e94560;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Agregar gasto</button>
-        </div>
-      </div>
-    `;
-  } catch (err) {
-    container.style.display = 'none';
-  }
+    var res = await fetch(API_BASE + '/api/my-trips/' + deviceId); var trips = await res.json();
+    if (!trips.length) { c.style.display = 'none'; return; }
+    c.style.display = 'block'; var t = trips[0];
+    var costsRes = await fetch(API_BASE + '/api/my-trips/' + t.id + '/costs'); var costs = await costsRes.json();
+    var total = costs.reduce(function(s,c){return s+parseFloat(c.amount);},0);
+    var costsHtml = ''; costs.forEach(function(co){ costsHtml += '<div style="display:flex;justify-content:space-between;padding:0.3rem 0;border-bottom:1px solid #e0e0e0;font-size:0.8rem;"><span>'+escapeHtml(co.concept)+'</span><span>$'+parseFloat(co.amount).toFixed(2)+'</span></div>'; });
+    c.innerHTML = '<div style="background:#fff;border:1px solid #e0e0e0;border-radius:12px;padding:1rem;"><h3 style="font-size:1rem;margin-bottom:0.5rem;">🚛 Viaje activo</h3><div style="display:flex;align-items:center;gap:0.5rem;margin:0.5rem 0;"><span style="width:10px;height:10px;border-radius:50%;background:#22c55e;"></span><span style="font-size:0.85rem;">'+escapeHtml(t.origin)+'</span><span style="flex:1;height:2px;background:#e0e0e0;"></span><span style="font-size:0.85rem;">'+escapeHtml(t.destination)+'</span><span style="width:10px;height:10px;border-radius:50%;background:#ef4444;"></span></div>'+(t.cargo?'<div style="font-size:0.8rem;color:#888;">📦 '+escapeHtml(t.cargo)+'</div>':'')+'<div style="text-align:center;margin:0.75rem 0;padding:0.75rem;background:#f5f5f5;border-radius:8px;"><div style="font-size:0.75rem;color:#888;">Gastos</div><div style="font-size:1.3rem;font-weight:700;">$'+total.toLocaleString('es-MX',{minimumFractionDigits:2})+'</div></div>'+costsHtml+'<div style="margin-top:0.75rem;border-top:1px solid #e0e0e0;padding-top:0.75rem;"><div style="font-size:0.85rem;font-weight:600;margin-bottom:0.5rem;">Agregar gasto</div><div style="display:flex;gap:0.5rem;"><select id="cost-type" style="flex:1;padding:0.5rem;border:1px solid #e0e0e0;border-radius:8px;font-size:0.85rem;"><option value="Gasolina">⛽ Gasolina</option><option value="Caseta">🛣️ Caseta</option><option value="Comida">🍔 Comida</option><option value="Hospedaje">🏨 Hospedaje</option><option value="Mantenimiento">🔧 Mantenimiento</option><option value="Otro">📝 Otro</option></select><input id="cost-amount-user" type="number" step="0.01" placeholder="$0.00" style="width:100px;padding:0.5rem;border:1px solid #e0e0e0;border-radius:8px;font-size:0.85rem;"></div><input id="cost-note-user" type="text" placeholder="Nota (opcional)" style="width:100%;margin-top:0.5rem;padding:0.5rem;border:1px solid #e0e0e0;border-radius:8px;font-size:0.85rem;"><button onclick="addMyTripCost('+t.id+')" style="width:100%;margin-top:0.5rem;padding:0.6rem;background:#22c55e;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Agregar gasto</button></div></div>';
+  } catch(e) { c.style.display = 'none'; }
 }
 
 async function addMyTripCost(tripId) {
-  const type = document.getElementById('cost-type').value;
-  const amount = parseFloat(document.getElementById('cost-amount-user').value);
-  const note = document.getElementById('cost-note-user').value.trim();
-
-  if (isNaN(amount) || amount <= 0) {
-    updateStatus('Ingresa un monto válido', 'error');
-    return;
-  }
-
-  const concept = note ? `${type} - ${note}` : type;
-
-  try {
-    const res = await fetch(`${API_BASE}/api/my-trips/${tripId}/costs`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ concept, amount }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      updateStatus('Gasto agregado ✓', 'success');
-      document.getElementById('cost-amount-user').value = '';
-      document.getElementById('cost-note-user').value = '';
-      loadMyTrip(); // recargar
-    } else {
-      updateStatus('Error agregando gasto', 'error');
-    }
-  } catch (err) {
-    updateStatus('Error: ' + err.message, 'error');
-  }
+  var type = document.getElementById('cost-type').value;
+  var amount = parseFloat(document.getElementById('cost-amount-user').value);
+  var note = document.getElementById('cost-note-user').value.trim();
+  if (isNaN(amount) || amount <= 0) { updateStatus('Monto inválido', 'error'); return; }
+  var concept = note ? type + ' - ' + note : type;
+  await fetch(API_BASE + '/api/my-trips/' + tripId + '/costs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ concept: concept, amount: amount }) });
+  updateStatus('Gasto agregado ✓', 'success');
+  document.getElementById('cost-amount-user').value = '';
+  document.getElementById('cost-note-user').value = '';
+  loadMyTrip();
 }
 
-// ============ MI HISTORIAL ============
+// ============ HISTORIAL ============
 
 async function viewMyHistory() {
-  const container = document.getElementById('my-history');
-
-  if (container.style.display === 'block') {
-    container.style.display = 'none';
-    return;
-  }
-
-  container.style.display = 'block';
-  container.innerHTML = '<p style="color:#888; text-align:center;">Cargando...</p>';
-
+  var c = document.getElementById('my-history');
+  if (c.style.display === 'block') { c.style.display = 'none'; return; }
+  c.style.display = 'block'; c.innerHTML = '<p style="color:#888;text-align:center;">Cargando...</p>';
   try {
-    const res = await fetch(`${API_BASE}/api/my-locations/${deviceId}?limit=50`);
-    const locations = await res.json();
-
-    if (locations.length === 0) {
-      container.innerHTML = '<p style="color:#888; text-align:center;">Sin historial aún</p>';
-      return;
-    }
-
-    let html = '<h3 style="margin-bottom:0.5rem;">📋 Mi historial</h3>';
-    html += '<div class="history-list">';
-
-    locations.forEach((loc, i) => {
-      const date = new Date(loc.recorded_at);
-      const isLatest = i === 0;
-      html += `
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:0.5rem 0; border-bottom:1px solid #1a1a4e; font-size:0.8rem; flex-wrap:wrap; gap:0.3rem; ${isLatest ? 'background:#1a3e1a; padding:0.5rem; border-radius:6px; margin-bottom:0.25rem;' : ''}">
-          <div>
-            <span style="color:${isLatest ? '#66cc66' : '#ccc'};">${isLatest ? '🔴 ÚLTIMA' : '📌'}</span>
-            <span>${date.toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
-            <span style="color:#888;">${date.toLocaleTimeString('es-MX')}</span>
-          </div>
-          <a href="https://www.google.com/maps?q=${loc.latitude},${loc.longitude}" target="_blank" style="text-decoration:none;">🗺️ Ver</a>
-        </div>
-      `;
+    var res = await fetch(API_BASE + '/api/my-locations/' + deviceId + '?limit=50'); var locations = await res.json();
+    if (!locations.length) { c.innerHTML = '<div style="background:#fff;border:1px solid #e0e0e0;border-radius:12px;padding:1.5rem;text-align:center;color:#aaa;">Sin historial</div>'; return; }
+    var html = '<div style="background:#fff;border:1px solid #e0e0e0;border-radius:12px;padding:1rem;"><h3 style="font-size:1rem;margin-bottom:0.5rem;">📋 Mi historial</h3>';
+    locations.forEach(function(loc, i) { var d = new Date(loc.recorded_at);
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:0.5rem 0;border-bottom:1px solid #e0e0e0;font-size:0.8rem;'+(i===0?'background:#dcfce7;padding:0.5rem;border-radius:6px;margin-bottom:0.25rem;':'')+'"><div><span style="color:'+(i===0?'#22c55e':'#999')+'">'+(i===0?'🔴 ÚLTIMA':'📌')+'</span> '+d.toLocaleDateString('es-MX',{weekday:'short',day:'numeric',month:'short'})+' <span style="color:#888;">'+d.toLocaleTimeString('es-MX')+'</span></div><a href="https://www.google.com/maps?q='+loc.latitude+','+loc.longitude+'" target="_blank">🗺️</a></div>';
     });
+    html += '</div>'; c.innerHTML = html;
+  } catch(e) { c.innerHTML = '<p style="color:#ef4444;text-align:center;">Error</p>'; }
+}
 
-    html += '</div>';
-    container.innerHTML = html;
-  } catch (err) {
-    container.innerHTML = '<p style="color:#cc6666; text-align:center;">Error cargando historial</p>';
-  }
+// ============ SERVICE WORKER ============
+
+function handleSWMessage(event) {
+  if (event.data.type === 'get-device-id') event.ports[0].postMessage({ deviceId: deviceId });
+  if (event.data.type === 'get-location') getLocationAndSend(event.data.requestId, event.data.deviceId);
+}
+
+async function getLocationAndSend(requestId, devId) {
+  try {
+    var pos = await new Promise(function(ok,fail){ navigator.geolocation.getCurrentPosition(ok,fail,{enableHighAccuracy:true,timeout:15000,maximumAge:0}); });
+    await fetch(API_BASE+'/api/location',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({deviceId:devId||deviceId,requestId:requestId,latitude:pos.coords.latitude,longitude:pos.coords.longitude,accuracy:pos.coords.accuracy})});
+  } catch(e){}
 }
 
 // ============ HELPERS ============
 
 function resetDevice() {
-  if (confirm('¿Seguro que quieres re-registrar este dispositivo?')) {
-    localStorage.clear();
-    deviceId = null;
-    caches.delete('app-data').catch(() => {});
-    showRegistration();
-    updateStatus('Registra tu dispositivo de nuevo');
-  }
+  if (confirm('¿Re-registrar dispositivo?')) { localStorage.removeItem('deviceId'); deviceId = null; showRegistration(); }
 }
 
 async function installApp() {
-  // Intentar prompt nativo primero
-  const prompt = deferredPrompt || window._deferredPrompt;
-  if (prompt) {
-    prompt.prompt();
-    const result = await prompt.userChoice;
-    deferredPrompt = null;
-    window._deferredPrompt = null;
-    if (result.outcome === 'accepted') {
-      updateStatus('App instalada ✓', 'success');
-      document.getElementById('install-app-card').style.display = 'none';
-    }
-    return;
-  }
-
-  // Si no hay prompt nativo, mostrar instrucciones
-  const hint = document.getElementById('install-app-hint');
-  if (isIOS()) {
-    hint.innerHTML = '👆 Toca el botón <strong>Compartir</strong> (📤) en la barra de Safari → <strong>"Agregar a pantalla de inicio"</strong>';
-    hint.style.color = '#e94560';
-  } else if (isAndroid()) {
-    hint.innerHTML = '👆 Toca el menú <strong>⋮</strong> de tu navegador → <strong>"Agregar a pantalla de inicio"</strong> o <strong>"Instalar"</strong>';
-    hint.style.color = '#e94560';
-  } else {
-    hint.innerHTML = '👆 Busca el ícono <strong>⬇️</strong> en la barra de direcciones o en el menú del navegador';
-    hint.style.color = '#e94560';
-  }
+  var p = deferredPrompt || window._deferredPrompt;
+  if (p) { p.prompt(); var r = await p.userChoice; deferredPrompt = null; if (r.outcome==='accepted') { updateStatus('Instalada ✓','success'); var ic=document.getElementById('install-app-card'); if(ic) ic.style.display='none'; } return; }
+  var hint = document.getElementById('install-app-hint');
+  if (isIOS()) hint.innerHTML = 'Safari → Compartir (📤) → Agregar a inicio';
+  else if (isAndroid()) hint.innerHTML = 'Menú ⋮ → Agregar a pantalla de inicio';
+  else hint.innerHTML = 'Busca ⬇️ en la barra de direcciones';
+  hint.style.color = '#ef4444';
 }
 
-function updateStatus(message, type = 'info') {
-  const el = document.getElementById('status');
+function updateStatus(message, type) {
+  var el = document.getElementById('status');
   el.textContent = message;
-  el.className = 'status status-' + type;
+  el.className = 'status status-' + (type || 'info');
 }
 
-function escapeHtml(text) {
-  if (!text) return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
+function escapeHtml(text) { if (!text) return ''; var d = document.createElement('div'); d.textContent = text; return d.innerHTML; }
 
 function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+  var padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  var rawData = window.atob(base64); var outputArray = new Uint8Array(rawData.length);
+  for (var i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
   return outputArray;
 }
 
 async function saveDeviceIdToCache(id) {
-  try {
-    const cache = await caches.open('app-data');
-    await cache.put('/device-id', new Response(JSON.stringify({ deviceId: id })));
-  } catch (e) { /* ignore */ }
+  try { var cache = await caches.open('app-data'); await cache.put('/device-id', new Response(JSON.stringify({ deviceId: id }))); } catch(e){}
 }
 
 document.addEventListener('DOMContentLoaded', init);
