@@ -182,6 +182,47 @@ app.delete('/api/users/:id', auth, superOnly, async (req, res) => {
   finally { if (conn) conn.release(); }
 });
 
+// ============ DEMO / PLANES ============
+
+// Registrar empresa demo
+app.post('/api/demo/register', async (req, res) => {
+  const { companyName, contactName, email, phone } = req.body;
+  if (!companyName || !email) return res.status(400).json({ error: 'companyName y email requeridos' });
+  const slug = companyName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    // Crear empresa demo
+    const result = await conn.query(
+      "INSERT INTO companies (name, slug, contact_email, contact_phone, plan, max_devices, demo_until) VALUES (?, ?, ?, ?, 'demo', 2, DATE_ADD(NOW(), INTERVAL 7 DAY))",
+      [companyName, slug + '-' + Date.now(), email, phone || '']);
+    const companyId = Number(result.insertId);
+    // Crear usuario admin de la empresa
+    const crypto = require('crypto');
+    const tempPass = 'demo' + Math.floor(Math.random() * 9000 + 1000);
+    const hash = crypto.createHash('sha256').update(tempPass).digest('hex');
+    await conn.query(
+      "INSERT INTO users (company_id, username, password_hash, name, role) VALUES (?, ?, ?, ?, 'company_admin')",
+      [companyId, email, hash, contactName || companyName]);
+    // Crear un usuario driver de prueba
+    const driverPass = 'driver' + Math.floor(Math.random() * 9000 + 1000);
+    const driverHash = crypto.createHash('sha256').update(driverPass).digest('hex');
+    await conn.query(
+      "INSERT INTO users (company_id, username, password_hash, name, role) VALUES (?, ?, ?, ?, 'driver')",
+      [companyId, 'driver-' + slug, driverHash, 'Conductor Demo']);
+    res.json({
+      success: true,
+      companyId,
+      adminUser: email,
+      adminPass: tempPass,
+      driverUser: 'driver-' + slug,
+      driverPass: driverPass,
+      demoUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('es-MX'),
+    });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Error creando demo' }); }
+  finally { if (conn) conn.release(); }
+});
+
 // ============ DEVICES ============
 
 app.post('/api/devices/register', async (req, res) => {
@@ -195,17 +236,35 @@ app.post('/api/devices/register', async (req, res) => {
       const companies = await conn.query('SELECT id FROM companies WHERE slug = ?', [companySlug]);
       if (companies.length > 0) companyId = companies[0].id;
     }
-    // Si tiene userId, buscar dispositivo existente
-    if (userId) {
-      const existing = await conn.query('SELECT id FROM devices WHERE user_id=?', [userId]);
-      if (existing.length > 0) {
-        const did = existing[0].id;
-        if (subscription && subscription.endpoint) {
-          await conn.query('UPDATE devices SET device_name=?, endpoint=?, p256dh=?, auth=? WHERE id=?', [deviceName, subscription.endpoint, subscription.keys.p256dh, subscription.keys.auth, did]);
-        } else {
-          await conn.query('UPDATE devices SET device_name=? WHERE id=?', [deviceName, did]);
+    // Verificar límites de la empresa
+    const company = await conn.query('SELECT * FROM companies WHERE id=?', [companyId]);
+    if (company.length > 0) {
+      const c = company[0];
+      // Verificar si el demo expiró
+      if (c.plan === 'demo' && c.demo_until && new Date(c.demo_until) < new Date()) {
+        return res.status(403).json({ error: 'El periodo de prueba ha expirado. Contacta al administrador para activar un plan.' });
+      }
+      // Verificar si el plan expiró
+      if (c.expires_at && new Date(c.expires_at) < new Date()) {
+        return res.status(403).json({ error: 'Tu plan ha expirado. Contacta al administrador.' });
+      }
+      // Verificar límite de dispositivos (solo si no es update)
+      if (userId) {
+        const existing = await conn.query('SELECT id FROM devices WHERE user_id=?', [userId]);
+        if (existing.length > 0) {
+          // Es update, permitir
+          const did = existing[0].id;
+          if (subscription && subscription.endpoint) {
+            await conn.query('UPDATE devices SET device_name=?, endpoint=?, p256dh=?, auth=? WHERE id=?', [deviceName, subscription.endpoint, subscription.keys.p256dh, subscription.keys.auth, did]);
+          } else {
+            await conn.query('UPDATE devices SET device_name=? WHERE id=?', [deviceName, did]);
+          }
+          return res.json({ success: true, deviceId: did });
         }
-        return res.json({ success: true, deviceId: did });
+      }
+      const deviceCount = await conn.query('SELECT COUNT(*) as cnt FROM devices WHERE company_id=?', [companyId]);
+      if (deviceCount[0].cnt >= c.max_devices) {
+        return res.status(403).json({ error: 'Límite de dispositivos alcanzado (' + c.max_devices + '). Actualiza tu plan.' });
       }
     }
     if (subscription && subscription.endpoint) {

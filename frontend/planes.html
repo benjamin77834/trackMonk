@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TrackMonk - Planes y Precios</title>
+  <meta name="theme-color" content="#22c55e">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:#fff; color:#1a1a1a; }
+
+    .hero { background:#111; color:#fff; padding:4rem 1.5rem; text-align:center; }
+    .hero h1 { font-size:2.5rem; margin-bottom:0.5rem; }
+    .hero p { color:#999; font-size:1.1rem; max-width:600px; margin:0 auto 2rem; }
+    .hero .badge { display:inline-block; background:#22c55e; color:#000; padding:0.3rem 1rem; border-radius:20px; font-weight:700; font-size:0.85rem; margin-bottom:1rem; }
+
+    .container { max-width:1000px; margin:0 auto; padding:2rem 1.5rem; }
+
+    .features { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:1.5rem; margin:2rem 0; }
+    .feature { text-align:center; padding:1.5rem; }
+    .feature .icon { font-size:2rem; margin-bottom:0.5rem; }
+    .feature h3 { font-size:1rem; margin-bottom:0.25rem; }
+    .feature p { font-size:0.85rem; color:#666; }
+
+    .plans { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:1.5rem; margin:2rem 0; }
+    .plan { border:2px solid #e0e0e0; border-radius:16px; padding:2rem 1.5rem; text-align:center; transition:all 0.2s; position:relative; }
+    .plan:hover { border-color:#22c55e; box-shadow:0 8px 24px rgba(34,197,94,0.15); }
+    .plan.popular { border-color:#22c55e; }
+    .plan.popular::before { content:'⭐ Popular'; position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:#22c55e; color:#fff; padding:0.2rem 1rem; border-radius:20px; font-size:0.75rem; font-weight:700; }
+    .plan h3 { font-size:1.2rem; margin-bottom:0.5rem; }
+    .plan .price { font-size:2.5rem; font-weight:800; color:#111; }
+    .plan .price span { font-size:1rem; font-weight:400; color:#666; }
+    .plan .devices { color:#22c55e; font-weight:600; margin:0.5rem 0; }
+    .plan ul { list-style:none; text-align:left; margin:1rem 0; }
+    .plan ul li { padding:0.3rem 0; font-size:0.9rem; color:#444; }
+    .plan ul li::before { content:'✓ '; color:#22c55e; font-weight:700; }
+    .plan .btn { display:block; width:100%; padding:0.8rem; background:#22c55e; color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:700; cursor:pointer; text-decoration:none; }
+    .plan .btn:hover { background:#16a34a; }
+    .plan.demo .btn { background:#3b82f6; }
+
+    .demo-section { background:#f5f5f5; padding:3rem 1.5rem; text-align:center; margin-top:2rem; border-radius:16px; }
+    .demo-section h2 { margin-bottom:0.5rem; }
+    .demo-section p { color:#666; margin-bottom:1.5rem; }
+    .demo-form { max-width:400px; margin:0 auto; }
+    .demo-form input { width:100%; padding:0.7rem 1rem; border:1px solid #ddd; border-radius:8px; margin-bottom:0.75rem; font-size:0.95rem; }
+    .demo-form input:focus { border-color:#22c55e; outline:none; box-shadow:0 0 0 3px rgba(34,197,94,0.1); }
+    .demo-form button { width:100%; padding:0.8rem; background:#22c55e; color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:700; cursor:pointer; }
+    .demo-form button:hover { background:#16a34a; }
+
+    #demo-result { display:none; background:#fff; border:2px solid #22c55e; border-radius:12px; padding:1.5rem; margin-top:1rem; text-align:left; }
+    #demo-result h3 { color:#22c55e; margin-bottom:0.75rem; }
+    #demo-result .cred { background:#f5f5f5; padding:0.5rem 0.75rem; border-radius:6px; margin:0.3rem 0; font-family:monospace; font-size:0.9rem; }
+
+    .footer { background:#111; color:#999; padding:2rem; text-align:center; margin-top:3rem; font-size:0.85rem; }
+    .footer a { color:#22c55e; text-decoration:none; }
+
+    @media(max-width:600px) { .hero h1 { font-size:1.8rem; } .plan .price { font-size:2rem; } }
+  </style>
+</head>
+<body>
+
+  <div class="hero">
+    <span class="badge">🐵 TrackMonk</span>
+    <h1>Trackea tu flota en tiempo real</h1>
+    <p>Ubicación GPS, alertas de emergencia, control de gastos y viajes. Todo desde el navegador, sin instalar apps pesadas.</p>
+    <a href="#demo" style="display:inline-block;padding:0.8rem 2rem;background:#22c55e;color:#fff;border-radius:10px;font-weight:700;text-decoration:none;font-size:1.1rem;">Prueba gratis 7 días</a>
+  </div>
+
+  <div class="container">
+    <div class="features">
+      <div class="feature"><div class="icon">📍</div><h3>Tracking GPS</h3><p>Ubicación en tiempo real de todos tus vehículos</p></div>
+      <div class="feature"><div class="icon">🚨</div><h3>Alertas</h3><p>Botón de emergencia: accidente, robo, avería</p></div>
+      <div class="feature"><div class="icon">🚛</div><h3>Viajes</h3><p>Control de rutas, carga y costos por viaje</p></div>
+      <div class="feature"><div class="icon">💬</div><h3>Mensajes</h3><p>Comunicación directa con conductores por push</p></div>
+      <div class="feature"><div class="icon">🗺️</div><h3>Mapa</h3><p>Visualiza toda tu flota en un mapa interactivo</p></div>
+      <div class="feature"><div class="icon">🏢</div><h3>Multi-empresa</h3><p>Cada empresa con sus propios usuarios y datos</p></div>
+    </div>
+
+    <h2 style="text-align:center;margin:2rem 0 0.5rem;">Planes</h2>
+    <p style="text-align:center;color:#666;margin-bottom:1.5rem;">Sin contratos. Cancela cuando quieras.</p>
+
+    <div class="plans">
+      <div class="plan demo">
+        <h3>Demo</h3>
+        <div class="price">Gratis</div>
+        <div class="devices">Hasta 2 dispositivos</div>
+        <ul>
+          <li>7 días de prueba</li>
+          <li>Tracking GPS</li>
+          <li>Alertas de emergencia</li>
+          <li>1 viaje activo</li>
+        </ul>
+        <a href="#demo" class="btn">Probar gratis</a>
+      </div>
+
+      <div class="plan">
+        <h3>Básico</h3>
+        <div class="price">$299 <span>/mes</span></div>
+        <div class="devices">Hasta 5 dispositivos</div>
+        <ul>
+          <li>Todo del Demo</li>
+          <li>Viajes ilimitados</li>
+          <li>Control de gastos</li>
+          <li>Historial 30 días</li>
+          <li>Mensajes push</li>
+        </ul>
+        <a href="https://wa.me/525635103278?text=Quiero%20el%20plan%20Básico%20de%20TrackMonk" class="btn">Contratar</a>
+      </div>
+
+      <div class="plan popular">
+        <h3>Pro</h3>
+        <div class="price">$799 <span>/mes</span></div>
+        <div class="devices">Hasta 20 dispositivos</div>
+        <ul>
+          <li>Todo del Básico</li>
+          <li>Historial 90 días</li>
+          <li>Reportes de viajes</li>
+          <li>Múltiples admins</li>
+          <li>Soporte prioritario</li>
+        </ul>
+        <a href="https://wa.me/525635103278?text=Quiero%20el%20plan%20Pro%20de%20TrackMonk" class="btn">Contratar</a>
+      </div>
+
+      <div class="plan">
+        <h3>Enterprise</h3>
+        <div class="price">$1,999 <span>/mes</span></div>
+        <div class="devices">Dispositivos ilimitados</div>
+        <ul>
+          <li>Todo del Pro</li>
+          <li>Historial ilimitado</li>
+          <li>API personalizada</li>
+          <li>Soporte dedicado</li>
+          <li>Marca blanca</li>
+        </ul>
+        <a href="https://wa.me/525635103278?text=Quiero%20el%20plan%20Enterprise%20de%20TrackMonk" class="btn">Contratar</a>
+      </div>
+    </div>
+
+    <div class="demo-section" id="demo">
+      <h2>🎯 Prueba gratis por 7 días</h2>
+      <p>Sin tarjeta de crédito. Registra tu empresa y empieza a trackear en 2 minutos.</p>
+      <div class="demo-form">
+        <input type="text" id="demo-company" placeholder="Nombre de tu empresa">
+        <input type="text" id="demo-name" placeholder="Tu nombre">
+        <input type="email" id="demo-email" placeholder="Email">
+        <input type="tel" id="demo-phone" placeholder="Teléfono (opcional)">
+        <button onclick="registerDemo()">Crear cuenta demo</button>
+      </div>
+      <div id="demo-result">
+        <h3>✅ ¡Cuenta creada!</h3>
+        <p>Guarda estas credenciales:</p>
+        <p><strong>Panel Admin:</strong> <a href="/admin.html" target="_blank">tracker.monkeyfon.com/admin.html</a></p>
+        <div class="cred">👤 Usuario: <span id="res-admin-user"></span></div>
+        <div class="cred">🔑 Contraseña: <span id="res-admin-pass"></span></div>
+        <p style="margin-top:0.75rem;"><strong>App del conductor:</strong> <a href="/" target="_blank">tracker.monkeyfon.com</a></p>
+        <div class="cred">👤 Usuario: <span id="res-driver-user"></span></div>
+        <div class="cred">🔑 Contraseña: <span id="res-driver-pass"></span></div>
+        <p style="margin-top:0.75rem;font-size:0.85rem;color:#666;">Demo válido hasta: <span id="res-demo-until"></span></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>🐵 TrackMonk by <a href="https://monkeyphone.net">Monkey Phone</a> · © 2026</p>
+    <p style="margin-top:0.5rem;">¿Dudas? <a href="https://wa.me/525635103278">WhatsApp</a></p>
+  </div>
+
+  <script src="/config.js"></script>
+  <script>
+    async function registerDemo() {
+      var company = document.getElementById('demo-company').value.trim();
+      var name = document.getElementById('demo-name').value.trim();
+      var email = document.getElementById('demo-email').value.trim();
+      var phone = document.getElementById('demo-phone').value.trim();
+      if (!company || !email) { alert('Ingresa nombre de empresa y email'); return; }
+      try {
+        var res = await fetch(API_BASE + '/api/demo/register', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ companyName: company, contactName: name, email: email, phone: phone }),
+        });
+        var data = await res.json();
+        if (data.success) {
+          document.getElementById('res-admin-user').textContent = data.adminUser;
+          document.getElementById('res-admin-pass').textContent = data.adminPass;
+          document.getElementById('res-driver-user').textContent = data.driverUser;
+          document.getElementById('res-driver-pass').textContent = data.driverPass;
+          document.getElementById('res-demo-until').textContent = data.demoUntil;
+          document.getElementById('demo-result').style.display = 'block';
+        } else { alert('Error: ' + (data.error || 'Intenta de nuevo')); }
+      } catch (err) { alert('Error de conexión'); }
+    }
+  </script>
+</body>
+</html>
