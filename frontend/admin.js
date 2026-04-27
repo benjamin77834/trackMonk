@@ -499,44 +499,41 @@ async function createTrip() {
 }
 
 async function viewTrip(tripId) {
-  const res = await af(`${API_BASE}/api/trips/${tripId}`);
-  const t = await res.json();
-  let costsHtml = '';
+  var res = await af(API_BASE + '/api/trips/' + tripId);
+  var t = await res.json();
+  var costsHtml = '';
   if (t.costs && t.costs.length > 0) {
-    costsHtml = '<table><tr><th>Concepto</th><th>Monto</th><th></th></tr>';
-    t.costs.forEach(c => {
-      costsHtml += `<tr><td>${esc(c.concept)}</td><td>$${parseFloat(c.amount).toFixed(2)}</td>
-        <td><button onclick="deleteCost(${c.id},${tripId})" class="btn btn-secondary btn-sm">🗑️</button></td></tr>`;
+    costsHtml = '<table style="width:100%;border-collapse:collapse;font-size:0.85rem;margin-top:0.5rem;"><tr style="background:#f5f5f5;"><th style="text-align:left;padding:0.5rem;border-bottom:2px solid #e0e0e0;">Concepto</th><th style="text-align:left;padding:0.5rem;border-bottom:2px solid #e0e0e0;">Fecha</th><th style="text-align:right;padding:0.5rem;border-bottom:2px solid #e0e0e0;">Monto</th><th style="padding:0.5rem;border-bottom:2px solid #e0e0e0;width:40px;"></th></tr>';
+    t.costs.forEach(function(c) {
+      var d = new Date(c.created_at);
+      costsHtml += '<tr><td style="padding:0.5rem;border-bottom:1px solid #eee;">' + esc(c.concept) + '</td><td style="padding:0.5rem;border-bottom:1px solid #eee;color:#666;font-size:0.8rem;">' + d.toLocaleDateString('es-MX',{day:'numeric',month:'short'}) + ' ' + d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}) + '</td><td style="padding:0.5rem;border-bottom:1px solid #eee;text-align:right;font-weight:600;">$' + parseFloat(c.amount).toLocaleString('es-MX',{minimumFractionDigits:2}) + '</td><td style="padding:0.5rem;border-bottom:1px solid #eee;"><button onclick="deleteCost(' + c.id + ',' + tripId + ')" class="btn btn-danger btn-sm" style="padding:0.2rem 0.4rem;">🗑️</button></td></tr>';
     });
     costsHtml += '</table>';
+  } else {
+    costsHtml = '<p style="color:#999;text-align:center;padding:1rem;">Sin gastos registrados</p>';
   }
-  showDetail(`
-    <h3>📋 Viaje #${t.id}</h3>
-    <div class="card-meta">👤 ${esc(t.person_name || t.device_name)} ${t.vehicle ? '· 🚗 ' + esc(t.vehicle) : ''}</div>
-    <div class="trip-route" style="margin:0.75rem 0;">
-      <span class="dot dot-start"></span><span>${esc(t.origin)}</span>
-      <span class="line"></span><span>${esc(t.destination)}</span><span class="dot dot-end"></span>
-    </div>
-    ${t.cargo ? `<div class="card-meta">📦 ${esc(t.cargo)}</div>` : ''}
-    ${t.notes ? `<div class="card-meta">📝 ${esc(t.notes)}</div>` : ''}
-    <div style="margin:1rem 0;padding:1rem;background:var(--bg);border-radius:8px;text-align:center;">
-      <div style="font-size:0.8rem;color:var(--text2);">Costo total</div>
-      <div style="font-size:1.5rem;font-weight:700;color:#fff;">$${parseFloat(t.total_cost || 0).toLocaleString('es-MX', {minimumFractionDigits:2})}</div>
-    </div>
-    ${costsHtml}
-    <div style="margin-top:1rem;padding-top:0.75rem;border-top:1px solid var(--border);">
-      <div style="font-size:0.85rem;font-weight:600;color:#fff;margin-bottom:0.5rem;">Agregar costo</div>
-      <div class="form-row">
-        <div class="form-group"><label>Concepto</label><input id="cost-concept" placeholder="Ej: Gasolina, Caseta..."></div>
-        <div class="form-group"><label>Monto $</label><input id="cost-amount" type="number" step="0.01" placeholder="0.00"></div>
-      </div>
-      <button onclick="addCost(${tripId})" class="btn btn-primary btn-sm">Agregar</button>
-    </div>
-    <div style="margin-top:1rem;">
-      <div class="card-meta">${t.locations ? t.locations.length : 0} ubicaciones registradas</div>
-      <button onclick="viewTripOnMap(${tripId});closeDetailDirect();" class="btn btn-accent2" style="width:100%;margin-top:0.5rem;">🗺️ Ver recorrido</button>
-    </div>
-  `);
+  var html = '<h3>📋 Viaje #' + t.id + '</h3>';
+  html += '<div class="card-meta">👤 ' + esc(t.person_name || t.device_name) + (t.vehicle ? ' · 🚗 ' + esc(t.vehicle) : '') + '</div>';
+  html += '<div class="trip-route" style="margin:0.75rem 0;"><span class="dot dot-start"></span><span>' + esc(t.origin) + '</span><span class="line"></span><span>' + esc(t.destination) + '</span><span class="dot dot-end"></span></div>';
+  if (t.cargo) html += '<div class="card-meta">📦 ' + esc(t.cargo) + '</div>';
+  if (t.notes) html += '<div class="card-meta">📝 ' + esc(t.notes) + '</div>';
+  html += '<div style="margin:1rem 0;padding:1rem;background:#f0fdf4;border:2px solid #bbf7d0;border-radius:10px;text-align:center;">';
+  html += '<div style="font-size:0.8rem;color:#16a34a;font-weight:600;">Costo total</div>';
+  html += '<div style="font-size:2rem;font-weight:800;color:#111;">$' + parseFloat(t.total_cost || 0).toLocaleString('es-MX', {minimumFractionDigits:2}) + '</div>';
+  html += '<div style="font-size:0.75rem;color:#666;">' + (t.costs ? t.costs.length : 0) + ' gastos · ' + (t.locations ? t.locations.length : 0) + ' ubicaciones</div>';
+  html += '</div>';
+  html += costsHtml;
+  html += '<div style="margin-top:0.75rem;display:flex;gap:0.5rem;flex-wrap:wrap;">';
+  html += '<button onclick="exportTripCosts(' + tripId + ')" class="btn btn-secondary btn-sm" style="flex:1;">📥 Gastos CSV</button>';
+  html += '<button onclick="exportTripFull(' + tripId + ')" class="btn btn-secondary btn-sm" style="flex:1;">📥 Reporte completo</button>';
+  html += '</div>';
+  html += '<div style="margin-top:1rem;padding-top:0.75rem;border-top:1px solid #e0e0e0;">';
+  html += '<div style="font-size:0.85rem;font-weight:600;margin-bottom:0.5rem;">Agregar gasto</div>';
+  html += '<div class="form-row"><div class="form-group"><label>Concepto</label><input id="cost-concept" placeholder="Ej: Gasolina, Caseta..."></div><div class="form-group"><label>Monto $</label><input id="cost-amount" type="number" step="0.01" placeholder="0.00"></div></div>';
+  html += '<button onclick="addCost(' + tripId + ')" class="btn btn-primary btn-sm">Agregar</button>';
+  html += '</div>';
+  html += '<button onclick="viewTripOnMap(' + tripId + ');closeDetailDirect();" class="btn btn-accent2" style="width:100%;margin-top:1rem;">🗺️ Ver recorrido en mapa</button>';
+  showDetail(html);
   window._currentTrip = t;
 }
 
