@@ -5,8 +5,8 @@ const pool = mariadb.createPool({
   port: parseInt(process.env.DB_PORT) || 3306,
   user: process.env.DB_USER || 'operador',
   password: process.env.DB_PASSWORD || 'operador01',
-  database: process.env.DB_NAME || 'location_tracker',
-  connectionLimit: 5,
+  database: process.env.DB_NAME || 'trackmonk_v2',
+  connectionLimit: 10,
 });
 
 module.exports = pool;

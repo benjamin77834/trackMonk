@@ -16,6 +16,7 @@
       <h1>TrackMonk</h1>
       <p>Panel de Administración</p>
       <div id="status-login" class="status"></div>
+      <input type="text" id="admin-username" placeholder="Usuario" value="admin">
       <input type="password" id="admin-password" placeholder="Contraseña" onkeydown="if(event.key==='Enter')adminLogin()">
       <button onclick="adminLogin()" class="btn-login">Entrar</button>
     </div>
@@ -44,6 +45,12 @@
         </button>
         <button class="nav-item" onclick="navigate('search')">
           <span class="nav-icon">🔍</span><span class="nav-label">Buscar</span>
+        </button>
+        <button class="nav-item nav-super" style="display:none;" onclick="navigate('companies')">
+          <span class="nav-icon">🏢</span><span class="nav-label">Empresas</span>
+        </button>
+        <button class="nav-item nav-super" style="display:none;" onclick="navigate('users')">
+          <span class="nav-icon">👥</span><span class="nav-label">Usuarios</span>
         </button>
       </div>
       <div class="sidebar-footer">
@@ -119,6 +126,24 @@
           <input type="text" id="search-input" placeholder="Buscar por nombre, teléfono, empresa o vehículo..." oninput="searchDevices()">
         </div>
         <div id="search-results"></div>
+      </section>
+
+      <!-- Page: Empresas (super admin) -->
+      <section id="page-companies" class="page">
+        <div class="toolbar">
+          <button onclick="showNewCompanyForm()" class="btn btn-primary">➕ Nueva empresa</button>
+          <button onclick="loadCompanies()" class="btn btn-secondary">🔄</button>
+        </div>
+        <div id="companies-list" class="grid"></div>
+      </section>
+
+      <!-- Page: Usuarios (super admin) -->
+      <section id="page-users" class="page">
+        <div class="toolbar">
+          <button onclick="showNewUserForm()" class="btn btn-primary">➕ Nuevo usuario</button>
+          <button onclick="loadUsers()" class="btn btn-secondary">🔄</button>
+        </div>
+        <div id="users-list" class="grid"></div>
       </section>
 
       <!-- Detail panel (modal) -->

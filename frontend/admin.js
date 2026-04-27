@@ -2,31 +2,38 @@ let leafletMap = null;
 let mapMarkers = [];
 let searchTimeout = null;
 let adminToken = sessionStorage.getItem('adminToken') || '';
+let currentRole = sessionStorage.getItem('adminRole') || '';
 let allDevices = [];
 
 // ============ AUTH ============
 
 async function adminLogin() {
-  const password = document.getElementById('admin-password').value;
+  var username = document.getElementById('admin-username') ? document.getElementById('admin-username').value : 'admin';
+  var password = document.getElementById('admin-password').value;
   if (!password) return;
   try {
-    const res = await fetch(`${API_BASE}/api/admin/login`, {
+    var res = await fetch(API_BASE + '/api/auth/login', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify({ username: username, password: password }),
     });
-    const data = await res.json();
+    var data = await res.json();
     if (data.success) {
       adminToken = data.token;
+      currentRole = data.role;
       sessionStorage.setItem('adminToken', adminToken);
+      sessionStorage.setItem('adminRole', data.role);
       document.getElementById('login-page').style.display = 'none';
       document.getElementById('dashboard').style.display = 'flex';
+      if (data.role === 'super_admin') document.querySelectorAll('.nav-super').forEach(function(el) { el.style.display = 'flex'; });
       loadDevices();
-    } else { setStatus('login', 'Contraseña incorrecta', 'error'); }
+      loadAlertCount();
+    } else { setStatus('login', 'Credenciales inválidas', 'error'); }
   } catch (err) { setStatus('login', 'Error de conexión', 'error'); }
 }
 
 function adminLogout() {
   sessionStorage.removeItem('adminToken');
+  sessionStorage.removeItem('adminRole');
   adminToken = '';
   location.reload();
 }
@@ -45,6 +52,7 @@ function init() {
       if (r.ok) {
         document.getElementById('login-page').style.display = 'none';
         document.getElementById('dashboard').style.display = 'flex';
+        if (currentRole === 'super_admin') document.querySelectorAll('.nav-super').forEach(function(el) { el.style.display = 'flex'; });
         loadDevices();
         loadAlertCount();
       } else { sessionStorage.removeItem('adminToken'); adminToken = ''; }
@@ -60,11 +68,13 @@ function navigate(page) {
   event.currentTarget.classList.add('active');
   document.getElementById('page-' + page).classList.add('active');
   document.getElementById('page-title').textContent =
-    { devices: 'Dispositivos', map: 'Mapa', trips: 'Viajes', alerts: 'Alertas', search: 'Buscar' }[page];
+    { devices: 'Dispositivos', map: 'Mapa', trips: 'Viajes', alerts: 'Alertas', search: 'Buscar', companies: 'Empresas', users: 'Usuarios' }[page];
   closeDetailDirect();
   if (page === 'map') setTimeout(() => { initMap(); loadAllOnMap(); }, 100);
   if (page === 'trips') loadTrips();
   if (page === 'alerts') loadAlerts();
+  if (page === 'companies') loadCompanies();
+  if (page === 'users') loadUsers();
   // Close sidebar on mobile
   document.querySelector('.sidebar').classList.remove('open');
 }
@@ -704,6 +714,122 @@ function searchDevices() {
       </div>`;
     });
   }, 300);
+}
+
+// ============ COMPANIES ============
+
+async function loadCompanies() {
+  var res = await af(API_BASE + '/api/companies');
+  var companies = await res.json();
+  var list = document.getElementById('companies-list');
+  list.innerHTML = '';
+  if (!companies.length) { list.innerHTML = '<div class="empty">No hay empresas</div>'; return; }
+  companies.forEach(function(c) {
+    list.innerHTML += '<div class="card"><div class="card-title">' + esc(c.name) + '</div>' +
+      '<div class="card-meta">🔗 ' + esc(c.slug) + '</div>' +
+      (c.contact_email ? '<div class="card-meta">📧 ' + esc(c.contact_email) + '</div>' : '') +
+      (c.contact_phone ? '<div class="card-meta">📞 ' + esc(c.contact_phone) + '</div>' : '') +
+      '<div class="card-meta">' + (c.is_active ? '<span style="color:#22c55e;">● Activa</span>' : '<span style="color:#ef4444;">● Inactiva</span>') + '</div>' +
+      '<div class="card-actions">' +
+        '<button onclick="editCompany(' + c.id + ')" class="btn btn-secondary btn-sm">✏️</button>' +
+        '<button onclick="deleteCompany(' + c.id + ',\'' + esc(c.name) + '\')" class="btn btn-danger btn-sm">🗑️</button>' +
+      '</div></div>';
+  });
+}
+
+function showNewCompanyForm() {
+  showDetail('<h3>➕ Nueva empresa</h3>' +
+    '<div class="form-group"><label>Nombre</label><input id="co-name"></div>' +
+    '<div class="form-group"><label>Slug (URL única)</label><input id="co-slug" placeholder="ej: mi-empresa"></div>' +
+    '<div class="form-row"><div class="form-group"><label>Email</label><input id="co-email"></div>' +
+    '<div class="form-group"><label>Teléfono</label><input id="co-phone"></div></div>' +
+    '<button onclick="createCompany()" class="btn btn-primary" style="width:100%;margin-top:0.5rem;">Crear</button>');
+}
+
+async function createCompany() {
+  var res = await af(API_BASE + '/api/companies', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: document.getElementById('co-name').value, slug: document.getElementById('co-slug').value, contact_email: document.getElementById('co-email').value, contact_phone: document.getElementById('co-phone').value }),
+  });
+  var data = await res.json();
+  if (data.success) { closeDetailDirect(); updateStatus('Empresa creada', 'success'); loadCompanies(); }
+  else updateStatus('Error: ' + (data.error || ''), 'error');
+}
+
+async function deleteCompany(id, name) {
+  if (!confirm('¿Eliminar empresa "' + name + '" y todos sus datos?')) return;
+  await af(API_BASE + '/api/companies/' + id, { method: 'DELETE' });
+  updateStatus('Empresa eliminada', 'success'); loadCompanies();
+}
+
+async function editCompany(id) {
+  var res = await af(API_BASE + '/api/companies');
+  var companies = await res.json();
+  var c = companies.find(function(x) { return x.id === id; });
+  if (!c) return;
+  showDetail('<h3>✏️ Editar empresa</h3>' +
+    '<div class="form-group"><label>Nombre</label><input id="co-name" value="' + esc(c.name) + '"></div>' +
+    '<div class="form-row"><div class="form-group"><label>Email</label><input id="co-email" value="' + esc(c.contact_email || '') + '"></div>' +
+    '<div class="form-group"><label>Teléfono</label><input id="co-phone" value="' + esc(c.contact_phone || '') + '"></div></div>' +
+    '<button onclick="saveCompany(' + id + ')" class="btn btn-primary" style="width:100%;margin-top:0.5rem;">Guardar</button>');
+}
+
+async function saveCompany(id) {
+  await af(API_BASE + '/api/companies/' + id, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: document.getElementById('co-name').value, contact_email: document.getElementById('co-email').value, contact_phone: document.getElementById('co-phone').value }),
+  });
+  closeDetailDirect(); updateStatus('Empresa actualizada', 'success'); loadCompanies();
+}
+
+// ============ USERS ============
+
+async function loadUsers() {
+  var res = await af(API_BASE + '/api/users');
+  var users = await res.json();
+  var list = document.getElementById('users-list');
+  list.innerHTML = '';
+  if (!users.length) { list.innerHTML = '<div class="empty">No hay usuarios</div>'; return; }
+  users.forEach(function(u) {
+    var roleBadge = u.role === 'super_admin' ? '<span class="card-badge" style="background:#fee2e2;color:#ef4444;">Super Admin</span>' : '<span class="card-badge badge-active">Admin Empresa</span>';
+    list.innerHTML += '<div class="card"><div class="card-title">' + esc(u.name) + ' ' + roleBadge + '</div>' +
+      '<div class="card-meta">👤 ' + esc(u.username) + '</div>' +
+      (u.company_name ? '<div class="card-meta">🏢 ' + esc(u.company_name) + '</div>' : '') +
+      '<div class="card-meta">' + (u.is_active ? '<span style="color:#22c55e;">● Activo</span>' : '<span style="color:#ef4444;">● Inactivo</span>') + '</div>' +
+      '<div class="card-actions">' +
+        (u.role !== 'super_admin' ? '<button onclick="deleteUser(' + u.id + ',\'' + esc(u.name) + '\')" class="btn btn-danger btn-sm">🗑️</button>' : '') +
+      '</div></div>';
+  });
+}
+
+function showNewUserForm() {
+  // Cargar empresas para el select
+  af(API_BASE + '/api/companies').then(function(r) { return r.json(); }).then(function(companies) {
+    var opts = companies.map(function(c) { return '<option value="' + c.id + '">' + esc(c.name) + '</option>'; }).join('');
+    showDetail('<h3>➕ Nuevo usuario</h3>' +
+      '<div class="form-group"><label>Nombre</label><input id="usr-name"></div>' +
+      '<div class="form-group"><label>Usuario</label><input id="usr-username"></div>' +
+      '<div class="form-group"><label>Contraseña</label><input id="usr-password" type="password"></div>' +
+      '<div class="form-group"><label>Empresa</label><select id="usr-company">' + opts + '</select></div>' +
+      '<div class="form-group"><label>Rol</label><select id="usr-role"><option value="company_admin">Admin Empresa</option>' + (currentRole === 'super_admin' ? '<option value="super_admin">Super Admin</option>' : '') + '</select></div>' +
+      '<button onclick="createUser()" class="btn btn-primary" style="width:100%;margin-top:0.5rem;">Crear</button>');
+  });
+}
+
+async function createUser() {
+  var res = await af(API_BASE + '/api/users', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: document.getElementById('usr-name').value, username: document.getElementById('usr-username').value, password: document.getElementById('usr-password').value, company_id: document.getElementById('usr-company').value, role: document.getElementById('usr-role').value }),
+  });
+  var data = await res.json();
+  if (data.success) { closeDetailDirect(); updateStatus('Usuario creado', 'success'); loadUsers(); }
+  else updateStatus('Error: ' + (data.error || ''), 'error');
+}
+
+async function deleteUser(id, name) {
+  if (!confirm('¿Eliminar usuario "' + name + '"?')) return;
+  await af(API_BASE + '/api/users/' + id, { method: 'DELETE' });
+  updateStatus('Usuario eliminado', 'success'); loadUsers();
 }
 
 // ============ DETAIL PANEL ============
