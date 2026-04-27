@@ -212,6 +212,20 @@ app.put('/api/config', auth, superOnly, (req, res) => {
   if (req.body.autoTrackEnabled !== undefined) cfg.autoTrackEnabled = req.body.autoTrackEnabled;
   if (req.body.autoTrackInterval !== undefined) cfg.autoTrackInterval = parseInt(req.body.autoTrackInterval) || 30;
   saveConfig(cfg);
+
+  // Actualizar cron real
+  const { execSync } = require('child_process');
+  try {
+    if (cfg.autoTrackEnabled) {
+      const interval = cfg.autoTrackInterval;
+      const cronExpr = interval >= 60 ? '0 */' + Math.floor(interval / 60) + ' * * *' : '*/' + interval + ' * * *';
+      execSync('(crontab -l 2>/dev/null | grep -v auto-track; echo "' + cronExpr + ' /home/ec2-user/trackMonk/backend/auto-track.sh") | crontab -');
+    } else {
+      // Desactivar: quitar el cron
+      execSync('(crontab -l 2>/dev/null | grep -v auto-track) | crontab -');
+    }
+  } catch (e) { console.error('Error actualizando cron:', e.message); }
+
   res.json({ success: true, config: cfg });
 });
 
