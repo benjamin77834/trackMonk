@@ -186,6 +186,36 @@ app.delete('/api/users/:id', auth, superOnly, async (req, res) => {
   finally { if (conn) conn.release(); }
 });
 
+const AUTO_TRACK_KEY = process.env.AUTO_TRACK_KEY || 'trackmonk-auto-2026';
+
+// ============ AUTO TRACK (cron) ============
+
+app.post('/api/auto-track', async (req, res) => {
+  const { key, companyId } = req.body;
+  if (key !== AUTO_TRACK_KEY) return res.status(401).json({ error: 'No autorizado' });
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    let sql = "SELECT * FROM devices WHERE endpoint != '' AND LENGTH(endpoint) > 0";
+    const params = [];
+    if (companyId) { sql += ' AND company_id = ?'; params.push(companyId); }
+    const devices = await conn.query(sql, params);
+    let sent = 0, failed = 0;
+    for (const d of devices) {
+      try {
+        const r = await conn.query('INSERT INTO tracking_requests (device_id, status) VALUES (?, ?)', [d.id, 'sent']);
+        await webPush.sendNotification(
+          { endpoint: d.endpoint, keys: { p256dh: d.p256dh, auth: d.auth } },
+          JSON.stringify({ type: 'track-location', requestId: Number(r.insertId), title: 'Ubicación', body: 'Actualizando ubicación' })
+        );
+        sent++;
+      } catch (e) { failed++; }
+    }
+    res.json({ success: true, sent, failed, total: devices.length });
+  } catch (err) { res.status(500).json({ error: 'Error interno' }); }
+  finally { if (conn) conn.release(); }
+});
+
 // ============ DEMO / PLANES ============
 
 // Registrar empresa demo
