@@ -115,7 +115,7 @@ app.post('/api/companies', auth, superOnly, async (req, res) => {
 });
 
 app.put('/api/companies/:id', auth, superOnly, async (req, res) => {
-  const { name, contact_email, contact_phone, is_active } = req.body;
+  const { name, contact_email, contact_phone, is_active, plan, max_devices, expires_at, demo_until } = req.body;
   let conn;
   try {
     conn = await pool.getConnection();
@@ -124,6 +124,10 @@ app.put('/api/companies/:id', auth, superOnly, async (req, res) => {
     if (contact_email !== undefined) { fields.push('contact_email=?'); vals.push(contact_email); }
     if (contact_phone !== undefined) { fields.push('contact_phone=?'); vals.push(contact_phone); }
     if (is_active !== undefined) { fields.push('is_active=?'); vals.push(is_active); }
+    if (plan) { fields.push('plan=?'); vals.push(plan); }
+    if (max_devices !== undefined) { fields.push('max_devices=?'); vals.push(max_devices); }
+    if (expires_at !== undefined) { fields.push('expires_at=?'); vals.push(expires_at || null); }
+    if (demo_until !== undefined) { fields.push('demo_until=?'); vals.push(demo_until || null); }
     if (fields.length) { vals.push(req.params.id); await conn.query('UPDATE companies SET ' + fields.join(',') + ' WHERE id=?', vals); }
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: 'Error interno' }); }

@@ -725,13 +725,17 @@ async function loadCompanies() {
   list.innerHTML = '';
   if (!companies.length) { list.innerHTML = '<div class="empty">No hay empresas</div>'; return; }
   companies.forEach(function(c) {
-    list.innerHTML += '<div class="card"><div class="card-title">' + esc(c.name) + '</div>' +
+    var planLabels = { demo: '🆓 Demo', basic: '📦 Básico', pro: '⭐ Pro', enterprise: '🏆 Enterprise' };
+    var planColors = { demo: 'background:#dbeafe;color:#1e40af;', basic: 'background:#dcfce7;color:#16a34a;', pro: 'background:#fef9c3;color:#a16207;', enterprise: 'background:#fce7f3;color:#9d174d;' };
+    list.innerHTML += '<div class="card"><div class="card-title">' + esc(c.name) + ' <span class="card-badge" style="' + (planColors[c.plan]||'') + '">' + (planLabels[c.plan]||c.plan) + '</span></div>' +
       '<div class="card-meta">🔗 ' + esc(c.slug) + '</div>' +
+      '<div class="card-meta">📱 ' + (c.max_devices || 0) + ' dispositivos máx</div>' +
       (c.contact_email ? '<div class="card-meta">📧 ' + esc(c.contact_email) + '</div>' : '') +
-      (c.contact_phone ? '<div class="card-meta">📞 ' + esc(c.contact_phone) + '</div>' : '') +
+      (c.expires_at ? '<div class="card-meta">📅 Vence: ' + new Date(c.expires_at).toLocaleDateString('es-MX') + '</div>' : '') +
+      (c.demo_until ? '<div class="card-meta">🆓 Demo hasta: ' + new Date(c.demo_until).toLocaleDateString('es-MX') + '</div>' : '') +
       '<div class="card-meta">' + (c.is_active ? '<span style="color:#22c55e;">● Activa</span>' : '<span style="color:#ef4444;">● Inactiva</span>') + '</div>' +
       '<div class="card-actions">' +
-        '<button onclick="editCompany(' + c.id + ')" class="btn btn-secondary btn-sm">✏️</button>' +
+        '<button onclick="editCompany(' + c.id + ')" class="btn btn-secondary btn-sm">✏️ Editar</button>' +
         '<button onclick="deleteCompany(' + c.id + ',\'' + esc(c.name) + '\')" class="btn btn-danger btn-sm">🗑️</button>' +
       '</div></div>';
   });
@@ -771,13 +775,27 @@ async function editCompany(id) {
     '<div class="form-group"><label>Nombre</label><input id="co-name" value="' + esc(c.name) + '"></div>' +
     '<div class="form-row"><div class="form-group"><label>Email</label><input id="co-email" value="' + esc(c.contact_email || '') + '"></div>' +
     '<div class="form-group"><label>Teléfono</label><input id="co-phone" value="' + esc(c.contact_phone || '') + '"></div></div>' +
+    '<div class="form-row"><div class="form-group"><label>Plan</label><select id="co-plan"><option value="demo"' + (c.plan==='demo'?' selected':'') + '>Demo</option><option value="basic"' + (c.plan==='basic'?' selected':'') + '>Básico ($299)</option><option value="pro"' + (c.plan==='pro'?' selected':'') + '>Pro ($799)</option><option value="enterprise"' + (c.plan==='enterprise'?' selected':'') + '>Enterprise ($1,999)</option></select></div>' +
+    '<div class="form-group"><label>Máx dispositivos</label><input id="co-max" type="number" value="' + (c.max_devices || 2) + '"></div></div>' +
+    '<div class="form-row"><div class="form-group"><label>Vence (plan)</label><input id="co-expires" type="date" value="' + (c.expires_at ? c.expires_at.substring(0,10) : '') + '"></div>' +
+    '<div class="form-group"><label>Demo hasta</label><input id="co-demo-until" type="date" value="' + (c.demo_until ? c.demo_until.substring(0,10) : '') + '"></div></div>' +
+    '<div class="form-group"><label>Activa</label><select id="co-active"><option value="1"' + (c.is_active?' selected':'') + '>Sí</option><option value="0"' + (!c.is_active?' selected':'') + '>No</option></select></div>' +
     '<button onclick="saveCompany(' + id + ')" class="btn btn-primary" style="width:100%;margin-top:0.5rem;">Guardar</button>');
 }
 
 async function saveCompany(id) {
   await af(API_BASE + '/api/companies/' + id, {
     method: 'PUT', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: document.getElementById('co-name').value, contact_email: document.getElementById('co-email').value, contact_phone: document.getElementById('co-phone').value }),
+    body: JSON.stringify({
+      name: document.getElementById('co-name').value,
+      contact_email: document.getElementById('co-email').value,
+      contact_phone: document.getElementById('co-phone').value,
+      plan: document.getElementById('co-plan').value,
+      max_devices: parseInt(document.getElementById('co-max').value) || 2,
+      expires_at: document.getElementById('co-expires').value || null,
+      demo_until: document.getElementById('co-demo-until').value || null,
+      is_active: parseInt(document.getElementById('co-active').value),
+    }),
   });
   closeDetailDirect(); updateStatus('Empresa actualizada', 'success'); loadCompanies();
 }
