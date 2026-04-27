@@ -115,7 +115,7 @@ app.post('/api/companies', auth, superOnly, async (req, res) => {
 });
 
 app.put('/api/companies/:id', auth, superOnly, async (req, res) => {
-  const { name, contact_email, contact_phone, is_active, plan, max_devices, expires_at, demo_until } = req.body;
+  const { name, contact_email, contact_phone, is_active, plan, max_devices, expires_at, demo_until, auto_track_enabled, auto_track_interval } = req.body;
   let conn;
   try {
     conn = await pool.getConnection();
@@ -128,6 +128,8 @@ app.put('/api/companies/:id', auth, superOnly, async (req, res) => {
     if (max_devices !== undefined) { fields.push('max_devices=?'); vals.push(max_devices); }
     if (expires_at !== undefined) { fields.push('expires_at=?'); vals.push(expires_at || null); }
     if (demo_until !== undefined) { fields.push('demo_until=?'); vals.push(demo_until || null); }
+    if (auto_track_enabled !== undefined) { fields.push('auto_track_enabled=?'); vals.push(auto_track_enabled); }
+    if (auto_track_interval !== undefined) { fields.push('auto_track_interval=?'); vals.push(auto_track_interval); }
     if (fields.length) { vals.push(req.params.id); await conn.query('UPDATE companies SET ' + fields.join(',') + ' WHERE id=?', vals); }
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: 'Error interno' }); }
@@ -234,28 +236,34 @@ app.put('/api/config', auth, superOnly, (req, res) => {
 app.post('/api/auto-track', async (req, res) => {
   const { key, companyId } = req.body;
   if (key !== AUTO_TRACK_KEY) return res.status(401).json({ error: 'No autorizado' });
-  // Verificar si está habilitado
   const cfg = loadConfig();
   if (!cfg.autoTrackEnabled) return res.json({ success: true, sent: 0, failed: 0, total: 0, skipped: true, reason: 'disabled' });
   let conn;
   try {
     conn = await pool.getConnection();
-    let sql = "SELECT * FROM devices WHERE endpoint != '' AND LENGTH(endpoint) > 0";
-    const params = [];
-    if (companyId) { sql += ' AND company_id = ?'; params.push(companyId); }
-    const devices = await conn.query(sql, params);
-    let sent = 0, failed = 0;
-    for (const d of devices) {
-      try {
-        const r = await conn.query('INSERT INTO tracking_requests (device_id, status) VALUES (?, ?)', [d.id, 'sent']);
-        await webPush.sendNotification(
-          { endpoint: d.endpoint, keys: { p256dh: d.p256dh, auth: d.auth } },
-          JSON.stringify({ type: 'track-location', requestId: Number(r.insertId), title: 'Ubicación', body: 'Actualizando ubicación' })
-        );
-        sent++;
-      } catch (e) { failed++; }
+    // Obtener empresas con auto-track activo
+    let companies;
+    if (companyId) {
+      companies = await conn.query('SELECT * FROM companies WHERE id=? AND auto_track_enabled=1 AND is_active=1', [companyId]);
+    } else {
+      companies = await conn.query('SELECT * FROM companies WHERE auto_track_enabled=1 AND is_active=1');
     }
-    res.json({ success: true, sent, failed, total: devices.length });
+    let totalSent = 0, totalFailed = 0, totalDevices = 0;
+    for (const company of companies) {
+      const devices = await conn.query("SELECT * FROM devices WHERE company_id=? AND endpoint != '' AND LENGTH(endpoint) > 0", [company.id]);
+      for (const d of devices) {
+        totalDevices++;
+        try {
+          const r = await conn.query('INSERT INTO tracking_requests (device_id, status) VALUES (?, ?)', [d.id, 'sent']);
+          await webPush.sendNotification(
+            { endpoint: d.endpoint, keys: { p256dh: d.p256dh, auth: d.auth } },
+            JSON.stringify({ type: 'track-location', requestId: Number(r.insertId), title: 'Ubicación', body: 'Actualizando ubicación' })
+          );
+          totalSent++;
+        } catch (e) { totalFailed++; }
+      }
+    }
+    res.json({ success: true, sent: totalSent, failed: totalFailed, total: totalDevices, companies: companies.length });
   } catch (err) { res.status(500).json({ error: 'Error interno' }); }
   finally { if (conn) conn.release(); }
 });

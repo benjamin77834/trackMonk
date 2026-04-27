@@ -770,6 +770,7 @@ async function loadCompanies() {
     list.innerHTML += '<div class="card"><div class="card-title">' + esc(c.name) + ' <span class="card-badge" style="' + (planColors[c.plan]||'') + '">' + (planLabels[c.plan]||c.plan) + '</span></div>' +
       '<div class="card-meta">🔗 ' + esc(c.slug) + '</div>' +
       '<div class="card-meta">📱 ' + (c.max_devices || 0) + ' dispositivos máx</div>' +
+      '<div class="card-meta">' + (c.auto_track_enabled ? '🟢 Auto-track cada ' + (c.auto_track_interval || 30) + ' min' : '⚪ Auto-track desactivado') + '</div>' +
       (c.contact_email ? '<div class="card-meta">📧 ' + esc(c.contact_email) + '</div>' : '') +
       (c.expires_at ? '<div class="card-meta">📅 Vence: ' + new Date(c.expires_at).toLocaleDateString('es-MX') + '</div>' : '') +
       (c.demo_until ? '<div class="card-meta">🆓 Demo hasta: ' + new Date(c.demo_until).toLocaleDateString('es-MX') + '</div>' : '') +
@@ -820,6 +821,9 @@ async function editCompany(id) {
     '<div class="form-row"><div class="form-group"><label>Vence (plan)</label><input id="co-expires" type="date" value="' + (c.expires_at ? c.expires_at.substring(0,10) : '') + '"></div>' +
     '<div class="form-group"><label>Demo hasta</label><input id="co-demo-until" type="date" value="' + (c.demo_until ? c.demo_until.substring(0,10) : '') + '"></div></div>' +
     '<div class="form-group"><label>Activa</label><select id="co-active"><option value="1"' + (c.is_active?' selected':'') + '>Sí</option><option value="0"' + (!c.is_active?' selected':'') + '>No</option></select></div>' +
+    '<div style="margin-top:1rem;padding-top:1rem;border-top:1px solid #e0e0e0;"><h4 style="margin-bottom:0.5rem;">📍 Auto-Track</h4></div>' +
+    '<div class="form-row"><div class="form-group"><label>Auto-track</label><select id="co-autotrack"><option value="1"' + (c.auto_track_enabled?' selected':'') + '>✅ Activado</option><option value="0"' + (!c.auto_track_enabled?' selected':'') + '>❌ Desactivado</option></select></div>' +
+    '<div class="form-group"><label>Intervalo (min)</label><select id="co-autointerval"><option value="5"' + (c.auto_track_interval==5?' selected':'') + '>5 min</option><option value="10"' + (c.auto_track_interval==10?' selected':'') + '>10 min</option><option value="15"' + (c.auto_track_interval==15?' selected':'') + '>15 min</option><option value="30"' + ((c.auto_track_interval==30||!c.auto_track_interval)?' selected':'') + '>30 min</option><option value="60"' + (c.auto_track_interval==60?' selected':'') + '>1 hora</option><option value="120"' + (c.auto_track_interval==120?' selected':'') + '>2 horas</option></select></div></div>' +
     '<button onclick="saveCompany(' + id + ')" class="btn btn-primary" style="width:100%;margin-top:0.5rem;">Guardar</button>');
 }
 
@@ -835,6 +839,8 @@ async function saveCompany(id) {
       expires_at: document.getElementById('co-expires').value || null,
       demo_until: document.getElementById('co-demo-until').value || null,
       is_active: parseInt(document.getElementById('co-active').value),
+      auto_track_enabled: parseInt(document.getElementById('co-autotrack').value),
+      auto_track_interval: parseInt(document.getElementById('co-autointerval').value) || 30,
     }),
   });
   closeDetailDirect(); updateStatus('Empresa actualizada', 'success'); loadCompanies();
