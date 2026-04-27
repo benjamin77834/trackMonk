@@ -214,10 +214,82 @@ async function trackAll() {
   updateStatus('Enviando push a todos...', 'warning');
   const res = await af(`${API_BASE}/api/track-all`, { method: 'POST' });
   const data = await res.json();
-  if (data.success) {
-    updateStatus(`Push: ${data.sent} OK, ${data.failed} fallidos`, 'success');
-    setTimeout(() => { navigate.call(document.querySelectorAll('.nav-item')[1], 'map'); }, 8000);
-  } else updateStatus('Error', 'error');
+  if (!data.success) { updateStatus('Error', 'error'); return; }
+
+  updateStatus('Push: ' + data.sent + ' OK, ' + data.failed + ' fallidos, ' + data.noPush + ' sin push', 'success');
+
+  var sentResults = data.results.filter(function(r) { return r.status === 'sent'; });
+  var failedResults = data.results.filter(function(r) { return r.status === 'failed'; });
+  var noPushResults = data.results.filter(function(r) { return r.status === 'no_push'; });
+
+  var html = '<h3>📍 Trackeo masivo</h3>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem;margin-bottom:1rem;text-align:center;">';
+  html += '<div style="background:#dcfce7;padding:0.75rem;border-radius:8px;"><div style="font-size:1.3rem;font-weight:700;color:#16a34a;">' + data.sent + '</div><div style="font-size:0.75rem;color:#666;">Enviados</div></div>';
+  html += '<div style="background:#fee2e2;padding:0.75rem;border-radius:8px;"><div style="font-size:1.3rem;font-weight:700;color:#ef4444;">' + data.failed + '</div><div style="font-size:0.75rem;color:#666;">Fallidos</div></div>';
+  html += '<div style="background:#fef9c3;padding:0.75rem;border-radius:8px;"><div style="font-size:1.3rem;font-weight:700;color:#a16207;">' + data.noPush + '</div><div style="font-size:0.75rem;color:#666;">Sin push</div></div>';
+  html += '</div>';
+
+  if (sentResults.length > 0) {
+    html += '<div style="margin-bottom:0.75rem;"><strong style="color:#16a34a;">✅ Enviados</strong>';
+    sentResults.forEach(function(r) {
+      html += '<div id="track-result-' + r.id + '" style="display:flex;justify-content:space-between;padding:0.4rem 0;border-bottom:1px solid #e0e0e0;font-size:0.85rem;">';
+      html += '<span>' + esc(r.name) + '</span><span class="track-status" style="color:#a16207;">⏳ Esperando...</span></div>';
+    });
+    html += '</div>';
+  }
+  if (failedResults.length > 0) {
+    html += '<div style="margin-bottom:0.75rem;"><strong style="color:#ef4444;">❌ Fallidos</strong>';
+    failedResults.forEach(function(r) { html += '<div style="padding:0.4rem 0;border-bottom:1px solid #e0e0e0;font-size:0.85rem;">' + esc(r.name) + '</div>'; });
+    html += '</div>';
+  }
+  if (noPushResults.length > 0) {
+    html += '<div><strong style="color:#a16207;">⚠️ Sin push</strong>';
+    noPushResults.forEach(function(r) { html += '<div style="padding:0.4rem 0;border-bottom:1px solid #e0e0e0;font-size:0.85rem;">' + esc(r.name) + '</div>'; });
+    html += '</div>';
+  }
+
+  html += '<button onclick="closeDetailDirect();" class="btn btn-accent2" style="width:100%;margin-top:1rem;">🗺️ Cerrar y ver mapa</button>';
+  showDetail(html);
+
+  // Polling para ver quién respondió
+  var requestIds = sentResults.map(function(r) { return r.requestId; }).filter(Boolean);
+  if (requestIds.length > 0) pollTrackAll(requestIds, sentResults);
+}
+
+function pollTrackAll(requestIds, sentResults) {
+  var attempts = 0;
+  var resolved = {};
+  var interval = setInterval(async function() {
+    attempts++;
+    try {
+      var res = await af(API_BASE + '/api/track-all/check', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestIds: requestIds }),
+      });
+      var statuses = await res.json();
+      statuses.forEach(function(s) {
+        if (s.status === 'received' && !resolved[s.requestId]) {
+          resolved[s.requestId] = true;
+          var el = document.getElementById('track-result-' + s.device_id);
+          if (el) {
+            var sp = el.querySelector('.track-status');
+            if (sp) { sp.textContent = '✅ Respondió'; sp.style.color = '#16a34a'; }
+          }
+        }
+      });
+      var count = Object.keys(resolved).length;
+      updateStatus('Trackeo: ' + count + '/' + requestIds.length + ' respondieron', 'success');
+      if (count >= requestIds.length || attempts >= 30) {
+        clearInterval(interval);
+        sentResults.forEach(function(r) {
+          if (r.requestId && !resolved[r.requestId]) {
+            var el = document.getElementById('track-result-' + r.id);
+            if (el) { var sp = el.querySelector('.track-status'); if (sp) { sp.textContent = '⏰ Sin respuesta'; sp.style.color = '#ef4444'; } }
+          }
+        });
+      }
+    } catch (e) {}
+  }, 2000);
 }
 
 async function trackDevice(id) {

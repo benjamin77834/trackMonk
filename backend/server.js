@@ -438,8 +438,9 @@ app.post('/api/track-all', requireAdmin, async (req, res) => {
   try {
     conn = await pool.getConnection();
     const devices = await conn.query("SELECT * FROM devices WHERE endpoint != '' AND endpoint IS NOT NULL AND LENGTH(endpoint) > 0");
+    const devicesNoPush = await conn.query("SELECT id, device_name, person_name FROM devices WHERE endpoint = '' OR endpoint IS NULL OR LENGTH(endpoint) = 0");
 
-    let sent = 0, failed = 0;
+    let results = [];
 
     for (const device of devices) {
       try {
@@ -453,20 +454,46 @@ app.post('/api/track-all', requireAdmin, async (req, res) => {
         });
 
         await webPush.sendNotification(pushSubscription, payload);
-        sent++;
+        results.push({ id: device.id, name: device.person_name || device.device_name, requestId, status: 'sent' });
       } catch (err) {
-        console.error(`Error push device ${device.id}:`, err.statusCode || err.message);
-        failed++;
+        results.push({ id: device.id, name: device.person_name || device.device_name, status: 'failed', error: err.statusCode || err.message });
       }
     }
 
-    res.json({ success: true, sent, failed, total: devices.length });
+    // Agregar los que no tienen push
+    devicesNoPush.forEach(function(d) {
+      results.push({ id: d.id, name: d.person_name || d.device_name, status: 'no_push' });
+    });
+
+    var sent = results.filter(function(r) { return r.status === 'sent'; }).length;
+    var failed = results.filter(function(r) { return r.status === 'failed'; }).length;
+    var noPush = results.filter(function(r) { return r.status === 'no_push'; }).length;
+
+    res.json({ success: true, sent: sent, failed: failed, noPush: noPush, total: results.length, results: results });
   } catch (err) {
     console.error('Error en track-all:', err);
     res.status(500).json({ error: 'Error interno del servidor' });
   } finally {
     if (conn) conn.release();
   }
+});
+
+// Verificar respuestas de un track-all (admin)
+app.post('/api/track-all/check', requireAdmin, async (req, res) => {
+  const { requestIds } = req.body;
+  if (!requestIds || !requestIds.length) return res.json([]);
+
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const placeholders = requestIds.map(function() { return '?'; }).join(',');
+    const rows = await conn.query(
+      'SELECT tr.id as requestId, tr.device_id, tr.status, d.person_name, d.device_name FROM tracking_requests tr JOIN devices d ON d.id = tr.device_id WHERE tr.id IN (' + placeholders + ')',
+      requestIds);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Error interno' });
+  } finally { if (conn) conn.release(); }
 });
 
 // Mis viajes activos (público, solo del propio dispositivo)
