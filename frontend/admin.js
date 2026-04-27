@@ -345,12 +345,9 @@ function initMap() {
   if (leafletMap) { leafletMap.invalidateSize(); return; }
   var mapEl = document.getElementById('map');
   if (!mapEl) return;
-  // Forzar altura
-  mapEl.style.height = Math.max(400, window.innerHeight - 200) + 'px';
   leafletMap = L.map('map').setView([19.4326, -99.1332], 12);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(leafletMap);
-  // Fix para cuando el contenedor cambia de tamaño
-  setTimeout(function() { leafletMap.invalidateSize(); }, 300);
+  setTimeout(function() { if (leafletMap) leafletMap.invalidateSize(); }, 500);
 }
 
 function clearMarkers() { mapMarkers.forEach(m => leafletMap.removeLayer(m)); mapMarkers = []; }
@@ -594,12 +591,21 @@ async function loadAlertCount() {
   try {
     var res = await af(`${API_BASE}/api/alerts/active-count`);
     var data = await res.json();
+    // Badge en sidebar
     var badge = document.getElementById('alert-count-badge');
     if (badge && data.count > 0) { badge.textContent = data.count; badge.style.display = 'inline'; }
     else if (badge) { badge.style.display = 'none'; }
+    // Alarma en top-bar
+    var alarm = document.getElementById('alert-alarm');
+    var alarmCount = document.getElementById('alert-alarm-count');
+    if (alarm && data.count > 0) {
+      alarm.style.display = 'block';
+      alarmCount.textContent = data.count;
+    } else if (alarm) {
+      alarm.style.display = 'none';
+    }
   } catch (e) {}
-  // Refresh every 30 seconds
-  setTimeout(loadAlertCount, 30000);
+  setTimeout(loadAlertCount, 15000);
 }
 
 async function loadAlerts() {

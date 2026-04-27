@@ -58,8 +58,14 @@
       <header class="top-bar">
         <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
         <h2 id="page-title">Dispositivos</h2>
+        <div id="alert-alarm" onclick="navigate.call(document.querySelectorAll('.nav-item')[3],'alerts')" style="display:none;cursor:pointer;background:#ef4444;color:#fff;padding:0.4rem 0.8rem;border-radius:8px;font-size:0.8rem;font-weight:600;animation:pulse 1.5s infinite;">
+          🚨 <span id="alert-alarm-count"></span> alertas activas
+        </div>
         <div id="status" class="status status-info"></div>
       </header>
+      <style>
+        @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.6;} }
+      </style>
 
       <!-- Page: Dispositivos -->
       <section id="page-devices" class="page active">
@@ -75,7 +81,7 @@
         <div class="toolbar">
           <button onclick="loadAllOnMap()" class="btn btn-secondary">🔄 Actualizar mapa</button>
         </div>
-        <div id="map" class="map-container"></div>
+        <div id="map" style="height:500px;width:100%;border-radius:12px;border:1px solid #e0e0e0;"></div>
       </section>
 
       <!-- Page: Viajes -->
