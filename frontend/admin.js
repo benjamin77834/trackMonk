@@ -343,8 +343,14 @@ async function showTrackResult(deviceId, lat, lng, accuracy) {
 
 function initMap() {
   if (leafletMap) { leafletMap.invalidateSize(); return; }
+  var mapEl = document.getElementById('map');
+  if (!mapEl) return;
+  // Forzar altura
+  mapEl.style.height = Math.max(400, window.innerHeight - 200) + 'px';
   leafletMap = L.map('map').setView([19.4326, -99.1332], 12);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(leafletMap);
+  // Fix para cuando el contenedor cambia de tamaño
+  setTimeout(function() { leafletMap.invalidateSize(); }, 300);
 }
 
 function clearMarkers() { mapMarkers.forEach(m => leafletMap.removeLayer(m)); mapMarkers = []; }
@@ -359,6 +365,8 @@ async function loadAllOnMap() {
   data.forEach(d => {
     const m = L.marker([d.latitude, d.longitude]).addTo(leafletMap);
     m.bindPopup(`<strong>${esc(d.person_name||d.device_name)}</strong><br>${d.phone?'📞 '+esc(d.phone)+'<br>':''}${d.vehicle?'🚗 '+esc(d.vehicle)+'<br>':''}🕐 ${new Date(d.recorded_at).toLocaleString()}`);
+    // Etiqueta visible siempre
+    m.bindTooltip(esc(d.person_name || d.device_name) + (d.vehicle ? ' - ' + esc(d.vehicle) : ''), { permanent: true, direction: 'top', offset: [0, -10], className: 'map-label' });
     mapMarkers.push(m); bounds.push([d.latitude, d.longitude]);
   });
   leafletMap.fitBounds(bounds, { padding: [30, 30] });
