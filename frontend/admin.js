@@ -474,38 +474,6 @@ async function filterMapByDevice(forceDeviceId) {
     } catch (err) { updateStatus('Error cargando mapa', 'error'); }
   }, 200);
 }
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-item')[1].classList.add('active');
-  document.getElementById('page-map').classList.add('active');
-  document.getElementById('page-title').textContent = 'Mapa';
-  setTimeout(async () => {
-    initMap();
-    const [devRes, locRes] = await Promise.all([
-      af(`${API_BASE}/api/devices/${deviceId}`), af(`${API_BASE}/api/locations/${deviceId}?limit=100`),
-    ]);
-    const device = await devRes.json(); const locations = await locRes.json();
-    clearMarkers();
-    if (locations.length === 0) { updateStatus('Sin ubicaciones', 'warning'); return; }
-    const latlngs = locations.map(l => [l.latitude, l.longitude]).reverse();
-    const poly = L.polyline(latlngs, { color: '#e94560', weight: 3 }).addTo(leafletMap);
-    mapMarkers.push(poly);
-    const bounds = [];
-    locations.forEach((loc, i) => {
-      const latest = i === 0;
-      const m = L.circleMarker([loc.latitude, loc.longitude], {
-        radius: latest ? 12 : 5, color: latest ? '#e94560' : '#8888cc',
-        fillColor: latest ? '#e94560' : '#8888cc', fillOpacity: 0.8,
-      }).addTo(leafletMap);
-      const dt = new Date(loc.recorded_at);
-      m.bindPopup(`<strong>${esc(device.person_name||device.device_name)}</strong><br>📅 ${dt.toLocaleDateString('es-MX',{weekday:'short',day:'numeric',month:'short'})}<br>🕐 ${dt.toLocaleTimeString('es-MX')}${latest?'<br><em style="color:green">● Última</em>':''}`);
-      mapMarkers.push(m); bounds.push([loc.latitude, loc.longitude]);
-    });
-    leafletMap.fitBounds(bounds, { padding: [30, 30] });
-    if (mapMarkers[1]) mapMarkers[1].openPopup();
-    updateStatus(`${locations.length} puntos`, 'success');
-  }, 200);
-}
 
 // ============ TRIPS ============
 
