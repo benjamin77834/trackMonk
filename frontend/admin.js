@@ -373,6 +373,23 @@ function clearMarkers() { mapMarkers.forEach(m => leafletMap.removeLayer(m)); ma
 
 async function loadAllOnMap() {
   initMap();
+  // Llenar el selector de dispositivos
+  var select = document.getElementById('map-device-filter');
+  if (select && select.options.length <= 1 && allDevices.length > 0) {
+    allDevices.forEach(function(d) {
+      var opt = document.createElement('option');
+      opt.value = d.id;
+      opt.textContent = esc(d.person_name || d.device_name) + (d.vehicle ? ' - ' + esc(d.vehicle) : '');
+      select.appendChild(opt);
+    });
+  }
+  // Poner fechas por defecto (últimos 2 días)
+  var today = new Date();
+  var twoDaysAgo = new Date(today.getTime() - 2 * 24 * 60 * 60 * 1000);
+  var fromInput = document.getElementById('map-date-from');
+  var toInput = document.getElementById('map-date-to');
+  if (fromInput && !fromInput.value) fromInput.value = twoDaysAgo.toISOString().split('T')[0];
+  if (toInput && !toInput.value) toInput.value = today.toISOString().split('T')[0];
   const res = await af(`${API_BASE}/api/locations-all/latest`);
   const data = await res.json();
   clearMarkers();
@@ -390,6 +407,73 @@ async function loadAllOnMap() {
 }
 
 async function viewOnMap(deviceId) {
+  // Cambiar el selector al dispositivo
+  var select = document.getElementById('map-device-filter');
+  if (select) select.value = deviceId;
+  filterMapByDevice(deviceId);
+}
+
+async function filterMapByDevice(forceDeviceId) {
+  var select = document.getElementById('map-device-filter');
+  var deviceId = forceDeviceId || (select ? select.value : 'all');
+  var from = document.getElementById('map-date-from').value;
+  var to = document.getElementById('map-date-to').value;
+
+  // Switch to map page if not there
+  var mapPage = document.getElementById('page-map');
+  if (!mapPage.classList.contains('active')) {
+    document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
+    document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+    document.querySelectorAll('.nav-item')[1].classList.add('active');
+    mapPage.classList.add('active');
+    document.getElementById('page-title').textContent = 'Mapa';
+  }
+
+  setTimeout(async function() {
+    initMap(); clearMarkers();
+
+    if (deviceId === 'all') {
+      loadAllOnMap();
+      return;
+    }
+
+    try {
+      var url = API_BASE + '/api/locations/' + deviceId + '?limit=200';
+      if (from) url += '&from=' + from;
+      if (to) url += '&to=' + to;
+      var devRes = await af(API_BASE + '/api/devices/' + deviceId);
+      var locRes = await af(url);
+      var device = await devRes.json();
+      var locations = await locRes.json();
+
+      if (locations.length === 0) { updateStatus('Sin ubicaciones en ese rango', 'warning'); return; }
+
+      var latlngs = locations.map(function(l) { return [l.latitude, l.longitude]; }).reverse();
+      var poly = L.polyline(latlngs, { color: '#22c55e', weight: 3 }).addTo(leafletMap);
+      mapMarkers.push(poly);
+
+      var bounds = [];
+      locations.forEach(function(loc, i) {
+        var latest = i === 0;
+        var dt = new Date(loc.recorded_at);
+        var m = L.circleMarker([loc.latitude, loc.longitude], {
+          radius: latest ? 12 : 5,
+          color: latest ? '#ef4444' : '#22c55e',
+          fillColor: latest ? '#ef4444' : '#22c55e',
+          fillOpacity: 0.8,
+        }).addTo(leafletMap);
+        m.bindPopup('<strong>' + esc(device.person_name || device.device_name) + '</strong><br>📅 ' + dt.toLocaleDateString('es-MX',{weekday:'short',day:'numeric',month:'short'}) + '<br>🕐 ' + dt.toLocaleTimeString('es-MX') + (latest ? '<br><em style="color:#ef4444;">● Última ubicación</em>' : ''));
+        if (latest) m.bindTooltip('ÚLTIMA', { permanent: true, direction: 'top', className: 'map-label' });
+        mapMarkers.push(m);
+        bounds.push([loc.latitude, loc.longitude]);
+      });
+
+      leafletMap.fitBounds(bounds, { padding: [30, 30] });
+      if (mapMarkers[1]) mapMarkers[1].openPopup();
+      updateStatus(locations.length + ' puntos de ' + esc(device.person_name || device.device_name) + (from ? ' (' + from + ' a ' + to + ')' : ''), 'success');
+    } catch (err) { updateStatus('Error cargando mapa', 'error'); }
+  }, 200);
+}
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item')[1].classList.add('active');

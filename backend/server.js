@@ -535,10 +535,17 @@ app.post('/api/location', async (req, res) => {
 });
 
 app.get('/api/locations/:deviceId', auth, async (req, res) => {
+  const { from, to } = req.query;
   let conn;
   try {
     conn = await pool.getConnection();
-    res.json(await conn.query('SELECT * FROM locations WHERE device_id=? ORDER BY recorded_at DESC LIMIT ?', [req.params.deviceId, parseInt(req.query.limit) || 50]));
+    let sql = 'SELECT * FROM locations WHERE device_id=?';
+    const params = [req.params.deviceId];
+    if (from) { sql += ' AND recorded_at >= ?'; params.push(from + ' 00:00:00'); }
+    if (to) { sql += ' AND recorded_at <= ?'; params.push(to + ' 23:59:59'); }
+    sql += ' ORDER BY recorded_at DESC LIMIT ?';
+    params.push(parseInt(req.query.limit) || 200);
+    res.json(await conn.query(sql, params));
   } catch (err) { res.status(500).json({ error: 'Error interno' }); }
   finally { if (conn) conn.release(); }
 });

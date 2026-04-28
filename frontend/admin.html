@@ -90,7 +90,13 @@
       <!-- Page: Mapa -->
       <section id="page-map" class="page">
         <div class="toolbar">
-          <button onclick="loadAllOnMap()" class="btn btn-secondary">🔄 Actualizar mapa</button>
+          <select id="map-device-filter" onchange="filterMapByDevice()" style="padding:0.5rem;border:1px solid #e0e0e0;border-radius:8px;font-size:0.85rem;">
+            <option value="all">Todos los dispositivos</option>
+          </select>
+          <input type="date" id="map-date-from" style="padding:0.5rem;border:1px solid #e0e0e0;border-radius:8px;font-size:0.85rem;">
+          <input type="date" id="map-date-to" style="padding:0.5rem;border:1px solid #e0e0e0;border-radius:8px;font-size:0.85rem;">
+          <button onclick="filterMapByDevice()" class="btn btn-primary btn-sm">Filtrar</button>
+          <button onclick="loadAllOnMap()" class="btn btn-secondary btn-sm">🔄 Todos</button>
         </div>
         <div id="map" style="height:500px;width:100%;border-radius:12px;border:1px solid #e0e0e0;"></div>
       </section>
