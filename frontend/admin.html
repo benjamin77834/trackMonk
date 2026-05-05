@@ -31,7 +31,10 @@
         <span class="logo-text">TrackMonk</span>
       </div>
       <div class="nav-items">
-        <button class="nav-item active" onclick="navigate('devices')">
+        <button class="nav-item active" onclick="navigate('dashboard')">
+          <span class="nav-icon">📊</span><span class="nav-label">Dashboard</span>
+        </button>
+        <button class="nav-item" onclick="navigate('devices')">
           <span class="nav-icon">📱</span><span class="nav-label">Dispositivos</span>
         </button>
         <button class="nav-item" onclick="navigate('map')">
@@ -77,8 +80,23 @@
         @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.6;} }
       </style>
 
+      <!-- Page: Dashboard -->
+      <section id="page-dashboard" class="page active">
+        <div class="grid" id="dashboard-metrics"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem;" id="dashboard-panels">
+          <div class="card">
+            <h3 style="margin-bottom:0.75rem;">🚨 Alertas recientes</h3>
+            <div id="dash-alerts"></div>
+          </div>
+          <div class="card">
+            <h3 style="margin-bottom:0.75rem;">🚛 Viajes activos</h3>
+            <div id="dash-trips"></div>
+          </div>
+        </div>
+      </section>
+
       <!-- Page: Dispositivos -->
-      <section id="page-devices" class="page active">
+      <section id="page-devices" class="page">
         <div class="toolbar">
           <button onclick="trackAll()" class="btn btn-danger">📍 Trackear todos</button>
           <button onclick="loadDevices()" class="btn btn-secondary">🔄 Refrescar</button>

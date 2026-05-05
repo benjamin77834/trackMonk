@@ -216,8 +216,9 @@ tr:hover td { background: var(--surface2); }
   .sidebar.open { transform: translateX(0); }
   .main-content { margin-left: 0; }
   .menu-toggle { display: block; }
-  .grid { grid-template-columns: 1fr; }
+  .grid { grid-template-columns: 1fr 1fr; }
   .map-container { height: 60vh; }
   .form-row { flex-direction: column; gap: 0; }
   .overlay { padding: 1rem; }
+  #dashboard-panels { grid-template-columns: 1fr !important; }
 }

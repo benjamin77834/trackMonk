@@ -268,6 +268,64 @@ app.post('/api/auto-track', async (req, res) => {
   finally { if (conn) conn.release(); }
 });
 
+// ============ DASHBOARD METRICS ============
+
+app.get('/api/metrics', auth, async (req, res) => {
+  const cf = companyFilter(req);
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const devCount = await conn.query('SELECT COUNT(*) as c FROM devices WHERE 1=1' + cf.sql, cf.params);
+    const devWithPush = await conn.query("SELECT COUNT(*) as c FROM devices WHERE endpoint != '' AND LENGTH(endpoint) > 0" + cf.sql, cf.params);
+    const alertsActive = await conn.query("SELECT COUNT(*) as c FROM alerts a JOIN devices d ON d.id=a.device_id WHERE a.status='active'" + (cf.sql ? cf.sql.replace('company_id', 'd.company_id') : ''), cf.params);
+    const tripsActive = await conn.query("SELECT COUNT(*) as c FROM trips t JOIN devices d ON d.id=t.device_id WHERE t.status='active'" + (cf.sql ? cf.sql.replace('company_id', 'd.company_id') : ''), cf.params);
+    const tripsMonth = await conn.query("SELECT COUNT(*) as c FROM trips t JOIN devices d ON d.id=t.device_id WHERE t.started_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)" + (cf.sql ? cf.sql.replace('company_id', 'd.company_id') : ''), cf.params);
+    const costsMonth = await conn.query("SELECT COALESCE(SUM(tc.amount),0) as total FROM trip_costs tc JOIN trips t ON t.id=tc.trip_id JOIN devices d ON d.id=t.device_id WHERE tc.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)" + (cf.sql ? cf.sql.replace('company_id', 'd.company_id') : ''), cf.params);
+    const locationsToday = await conn.query("SELECT COUNT(*) as c FROM locations l JOIN devices d ON d.id=l.device_id WHERE l.recorded_at >= CURDATE()" + (cf.sql ? cf.sql.replace('company_id', 'd.company_id') : ''), cf.params);
+
+    res.json({
+      devices: Number(devCount[0].c),
+      devicesWithPush: Number(devWithPush[0].c),
+      alertsActive: Number(alertsActive[0].c),
+      tripsActive: Number(tripsActive[0].c),
+      tripsMonth: Number(tripsMonth[0].c),
+      costsMonth: parseFloat(costsMonth[0].total),
+      locationsToday: Number(locationsToday[0].c),
+    });
+  } catch (err) { console.error(err); res.status(500).json({ error: 'Error interno' }); }
+  finally { if (conn) conn.release(); }
+});
+
+// Últimas alertas para dashboard
+app.get('/api/alerts/recent', auth, async (req, res) => {
+  const cf = companyFilter(req);
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    let sql = "SELECT a.*, d.person_name, d.device_name, d.phone FROM alerts a JOIN devices d ON d.id=a.device_id WHERE 1=1";
+    const params = [];
+    if (cf.sql) { sql += cf.sql.replace('company_id', 'd.company_id'); params.push(...cf.params); }
+    sql += ' ORDER BY a.created_at DESC LIMIT 5';
+    res.json(await conn.query(sql, params));
+  } catch (err) { res.status(500).json({ error: 'Error interno' }); }
+  finally { if (conn) conn.release(); }
+});
+
+// Viajes activos para dashboard
+app.get('/api/trips/active', auth, async (req, res) => {
+  const cf = companyFilter(req);
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    let sql = "SELECT t.*, d.person_name, d.device_name, d.vehicle FROM trips t JOIN devices d ON d.id=t.device_id WHERE t.status='active'";
+    const params = [];
+    if (cf.sql) { sql += cf.sql.replace('company_id', 'd.company_id'); params.push(...cf.params); }
+    sql += ' ORDER BY t.started_at DESC LIMIT 5';
+    res.json(await conn.query(sql, params));
+  } catch (err) { res.status(500).json({ error: 'Error interno' }); }
+  finally { if (conn) conn.release(); }
+});
+
 // ============ DEMO / PLANES ============
 
 // Registrar empresa demo
@@ -631,6 +689,13 @@ app.post('/api/alerts', async (req, res) => {
     conn = await pool.getConnection();
     const result = await conn.query('INSERT INTO alerts (device_id, alert_type, message, latitude, longitude, accuracy) VALUES (?, ?, ?, ?, ?, ?)',
       [deviceId, alert_type, message || '', latitude || null, longitude || null, accuracy || null]);
+    // Log de alerta para notificación
+    const devices = await conn.query('SELECT d.*, c.contact_email FROM devices d JOIN companies c ON c.id=d.company_id WHERE d.id=?', [deviceId]);
+    if (devices.length > 0) {
+      const d = devices[0];
+      const typeLabels = { accident:'ACCIDENTE', robbery:'ROBO/ASALTO', breakdown:'AVERIA', help:'AUXILIO' };
+      console.log('🚨 ALERTA: ' + (typeLabels[alert_type]||alert_type) + ' - ' + (d.person_name||d.device_name) + ' - ' + (d.phone||'') + (latitude ? ' - https://www.google.com/maps?q='+latitude+','+longitude : ''));
+    }
     res.json({ success: true, alertId: Number(result.insertId) });
   } catch (err) { res.status(500).json({ error: 'Error interno' }); }
   finally { if (conn) conn.release(); }

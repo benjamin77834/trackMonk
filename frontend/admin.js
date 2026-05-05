@@ -85,6 +85,7 @@ function showDashboard() {
   if (currentRole === 'super_admin') {
     document.querySelectorAll('.nav-super').forEach(function(el) { el.style.display = 'flex'; });
   }
+  loadDashboard();
   loadDevices();
   loadAlertCount();
 }
@@ -108,17 +109,67 @@ function navigate(page) {
   if (event && event.currentTarget) event.currentTarget.classList.add('active');
   var pageEl = document.getElementById('page-' + page);
   if (pageEl) pageEl.classList.add('active');
-  var titles = { devices:'Dispositivos', map:'Mapa', trips:'Viajes', alerts:'Alertas', search:'Buscar', companies:'Empresas', users:'Usuarios', settings:'Configuración' };
+  var titles = { dashboard:'Dashboard', devices:'Dispositivos', map:'Mapa', trips:'Viajes', alerts:'Alertas', search:'Buscar', companies:'Empresas', users:'Usuarios', settings:'Configuración' };
   document.getElementById('page-title').textContent = titles[page] || page;
   closeDetailDirect();
   document.querySelector('.sidebar').classList.remove('open');
 
+  if (page === 'dashboard') loadDashboard();
   if (page === 'map') setTimeout(function() { initMap(); loadAllOnMap(); }, 150);
   if (page === 'trips') loadTrips();
   if (page === 'alerts') loadAlerts();
   if (page === 'companies') loadCompanies();
   if (page === 'users') loadUsers();
   if (page === 'settings') loadSettings();
+}
+
+// ============ DASHBOARD ============
+
+async function loadDashboard() {
+  try {
+    var res = await af(API_BASE + '/api/metrics');
+    var m = await res.json();
+    var metrics = document.getElementById('dashboard-metrics');
+    metrics.innerHTML =
+      '<div class="card" style="text-align:center;"><div style="font-size:2rem;font-weight:800;color:#111;">' + m.devices + '</div><div class="card-meta">Dispositivos</div></div>' +
+      '<div class="card" style="text-align:center;"><div style="font-size:2rem;font-weight:800;color:#22c55e;">' + m.devicesWithPush + '</div><div class="card-meta">Con push activo</div></div>' +
+      '<div class="card" style="text-align:center;"><div style="font-size:2rem;font-weight:800;color:#ef4444;">' + m.alertsActive + '</div><div class="card-meta">Alertas activas</div></div>' +
+      '<div class="card" style="text-align:center;"><div style="font-size:2rem;font-weight:800;color:#3b82f6;">' + m.tripsActive + '</div><div class="card-meta">Viajes activos</div></div>' +
+      '<div class="card" style="text-align:center;"><div style="font-size:2rem;font-weight:800;color:#111;">' + m.tripsMonth + '</div><div class="card-meta">Viajes (30 días)</div></div>' +
+      '<div class="card" style="text-align:center;"><div style="font-size:2rem;font-weight:800;color:#111;">$' + m.costsMonth.toLocaleString('es-MX',{minimumFractionDigits:0}) + '</div><div class="card-meta">Gastos (30 días)</div></div>' +
+      '<div class="card" style="text-align:center;"><div style="font-size:2rem;font-weight:800;color:#22c55e;">' + m.locationsToday + '</div><div class="card-meta">Ubicaciones hoy</div></div>';
+
+    // Alertas recientes
+    var alertRes = await af(API_BASE + '/api/alerts/recent');
+    var alerts = await alertRes.json();
+    var dashAlerts = document.getElementById('dash-alerts');
+    if (!alerts.length) { dashAlerts.innerHTML = '<p class="card-meta">Sin alertas recientes</p>'; }
+    else {
+      var typeIcons = { accident:'🚗💥', robbery:'🔫', breakdown:'🔧', help:'🆘', other:'⚠️' };
+      dashAlerts.innerHTML = '';
+      alerts.forEach(function(a) {
+        var dt = new Date(a.created_at);
+        var statusColor = a.status==='active'?'#ef4444':a.status==='attending'?'#eab308':'#22c55e';
+        dashAlerts.innerHTML += '<div style="display:flex;justify-content:space-between;align-items:center;padding:0.4rem 0;border-bottom:1px solid #eee;font-size:0.85rem;">' +
+          '<span>' + (typeIcons[a.alert_type]||'⚠️') + ' ' + esc(a.person_name||a.device_name) + '</span>' +
+          '<span style="color:' + statusColor + ';font-size:0.75rem;">' + dt.toLocaleDateString('es-MX',{day:'numeric',month:'short'}) + '</span></div>';
+      });
+    }
+
+    // Viajes activos
+    var tripRes = await af(API_BASE + '/api/trips/active');
+    var trips = await tripRes.json();
+    var dashTrips = document.getElementById('dash-trips');
+    if (!trips.length) { dashTrips.innerHTML = '<p class="card-meta">Sin viajes activos</p>'; }
+    else {
+      dashTrips.innerHTML = '';
+      trips.forEach(function(t) {
+        dashTrips.innerHTML += '<div style="padding:0.4rem 0;border-bottom:1px solid #eee;font-size:0.85rem;">' +
+          '<div style="font-weight:600;">' + esc(t.person_name||t.device_name) + '</div>' +
+          '<div class="card-meta">' + esc(t.origin) + ' → ' + esc(t.destination) + '</div></div>';
+      });
+    }
+  } catch (e) { updateStatus('Error cargando dashboard', 'error'); }
 }
 
 // ============ DEVICES ============
