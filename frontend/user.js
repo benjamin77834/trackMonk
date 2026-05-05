@@ -5,6 +5,8 @@ var pushSubscription = null;
 var hasPush = ('PushManager' in window);
 var isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
 var deferredPrompt = null;
+var pollingInterval = null;
+var POLLING_MINUTES = 5; // Enviar ubicación cada 5 minutos automáticamente
 
 function isIOS() { return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
 function isAndroid() { return /Android/.test(navigator.userAgent); }
@@ -25,8 +27,33 @@ async function init() {
     } catch (e) {}
   }
 
-  if (deviceId) { showRegistered(); }
+  if (deviceId) { showRegistered(); startPolling(); }
   else { showRegistration(); updateStatus('Registra tu dispositivo'); }
+}
+
+// ============ POLLING (fallback automático) ============
+
+function startPolling() {
+  if (pollingInterval) return;
+  // Enviar ubicación inmediatamente
+  sendLocationSilent();
+  // Luego cada X minutos
+  pollingInterval = setInterval(sendLocationSilent, POLLING_MINUTES * 60 * 1000);
+}
+
+async function sendLocationSilent() {
+  if (!deviceId) return;
+  try {
+    var pos = await new Promise(function(ok, fail) {
+      navigator.geolocation.getCurrentPosition(ok, fail, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
+    });
+    await fetch(API_BASE + '/api/location', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deviceId: deviceId, latitude: pos.coords.latitude, longitude: pos.coords.longitude, accuracy: pos.coords.accuracy }),
+    });
+    var lastEl = document.getElementById('last-sent');
+    if (lastEl) lastEl.textContent = 'Última actualización: ' + new Date().toLocaleTimeString('es-MX');
+  } catch (e) { /* silencioso */ }
 }
 
 // ============ DRIVER LOGIN ============

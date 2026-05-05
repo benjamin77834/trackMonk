@@ -736,7 +736,7 @@ async function loadUsers() {
     list.innerHTML += '<div class="card"><div class="card-title">' + esc(u.name) + ' <span class="card-badge badge-active">' + (roleLabels[u.role]||u.role) + '</span></div>' +
       '<div class="card-meta">👤 ' + esc(u.username) + '</div>' +
       (u.company_name?'<div class="card-meta">🏢 '+esc(u.company_name)+'</div>':'') +
-      '<div class="card-actions">' + (u.role!=='super_admin'?'<button onclick="deleteUser('+u.id+',\''+esc(u.name)+'\')" class="btn btn-danger btn-sm">🗑️</button>':'') + '</div></div>';
+      '<div class="card-actions">' + (u.role!=='super_admin'?'<button onclick="sendInvite(\''+esc(u.name)+'\',\''+esc(u.username)+'\')" class="btn btn-success btn-sm">📲 WhatsApp</button><button onclick="deleteUser('+u.id+',\''+esc(u.name)+'\')" class="btn btn-danger btn-sm">🗑️</button>':'') + '</div></div>';
   });
 }
 
@@ -754,13 +754,37 @@ function showNewUserForm() {
 }
 
 async function createUser() {
-  var res = await af(API_BASE+'/api/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:document.getElementById('usr-name').value,username:document.getElementById('usr-username').value,password:document.getElementById('usr-password').value,company_id:document.getElementById('usr-company').value,role:document.getElementById('usr-role').value})});
+  var name = document.getElementById('usr-name').value;
+  var username = document.getElementById('usr-username').value;
+  var password = document.getElementById('usr-password').value;
+  var company_id = document.getElementById('usr-company').value;
+  var role = document.getElementById('usr-role').value;
+  var res = await af(API_BASE+'/api/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,username:username,password:password,company_id:company_id,role:role})});
   var data = await res.json();
-  if (data.success) { closeDetailDirect(); updateStatus('Usuario creado','success'); loadUsers(); }
+  if (data.success) {
+    // Mostrar credenciales y link de WhatsApp
+    var msg = '🐵 *TrackMonk*\n\nHola ' + name + ', ya tienes acceso al tracking.\n\n📱 Abre: tracker.monkeyfon.com\n👤 Usuario: ' + username + '\n🔑 Contraseña: ' + password + '\n\n' + (role === 'driver' ? 'Inicia sesión y registra tu dispositivo.' : 'Accede al panel admin: tracker.monkeyfon.com/admin.html');
+    var waLink = 'https://wa.me/?text=' + encodeURIComponent(msg);
+    showDetail(
+      '<h3>✅ Usuario creado</h3>' +
+      '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:1rem;margin:1rem 0;">' +
+        '<p style="font-weight:600;">Credenciales:</p>' +
+        '<div style="background:#fff;padding:0.5rem;border-radius:6px;margin:0.5rem 0;font-family:monospace;">👤 ' + esc(username) + '</div>' +
+        '<div style="background:#fff;padding:0.5rem;border-radius:6px;margin:0.5rem 0;font-family:monospace;">🔑 ' + esc(password) + '</div>' +
+      '</div>' +
+      '<a href="' + waLink + '" target="_blank" class="btn btn-success" style="display:block;text-align:center;width:100%;padding:0.8rem;text-decoration:none;font-size:1rem;">📲 Enviar por WhatsApp</a>' +
+      '<button onclick="closeDetailDirect();loadUsers();" class="btn btn-secondary" style="width:100%;margin-top:0.5rem;">Cerrar</button>'
+    );
+  }
   else updateStatus('Error: '+(data.error||''),'error');
 }
 
 async function deleteUser(id,name) { if (!confirm('¿Eliminar "'+name+'"?')) return; await af(API_BASE+'/api/users/'+id,{method:'DELETE'}); updateStatus('Eliminado','success'); loadUsers(); }
+
+function sendInvite(name, username) {
+  var msg = '🐵 *TrackMonk*\n\nHola ' + name + ', ya tienes acceso al tracking.\n\n📱 Abre: tracker.monkeyfon.com\n👤 Usuario: ' + username + '\n🔑 Contraseña: (la que te dieron)\n\nInicia sesión y registra tu dispositivo para que podamos ver tu ubicación.';
+  window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+}
 
 // ============ SETTINGS ============
 
