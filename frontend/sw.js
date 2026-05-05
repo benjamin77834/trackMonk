@@ -19,12 +19,13 @@ self.addEventListener('push', function(event) {
   if (data.type === 'track-location') {
     // Mostrar notificación y intentar obtener ubicación
     event.waitUntil(
-      self.registration.showNotification(data.title || 'Ubicación solicitada', {
-        body: data.body || 'Toca para enviar tu ubicación',
+      self.registration.showNotification('📍 Toca aquí para enviar tu ubicación', {
+        body: 'Tu empresa solicita tu ubicación. Toca esta notificación.',
         icon: '/icon-192.png',
         tag: 'location-request-' + data.requestId,
         requireInteraction: true,
         data: { type: 'track-location', requestId: data.requestId },
+        actions: [{ action: 'send', title: '📍 Enviar ubicación' }],
       }).then(function() {
         // Intentar enviar ubicación si hay un cliente abierto
         return tryGetLocation(data.requestId);
