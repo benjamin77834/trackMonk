@@ -3,13 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TrackMonk</title>
+  <title>TrackMonk - Tracking GPS</title>
   <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#e94560">
+  <meta name="theme-color" content="#22c55e">
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
   <div class="container">
+
+    <!-- Header -->
     <header>
       <h1>🐵 TrackMonk</h1>
       <div id="status" class="status">Cargando...</div>
@@ -18,25 +20,32 @@
     <!-- Login del conductor -->
     <section id="driver-login-section">
       <div class="card" style="text-align:center;">
-        <h2>🐵 TrackMonk</h2>
-        <p style="color:#666; margin-bottom:1rem;">Ingresa tus credenciales</p>
+        <div style="font-size:3rem;margin-bottom:0.5rem;">🐵</div>
+        <h2 style="margin-bottom:0.25rem;">TrackMonk</h2>
+        <p style="color:#666;font-size:0.9rem;margin-bottom:1.5rem;">Tracking GPS para tu flota</p>
         <div class="form-group">
-          <input type="text" id="driver-username" placeholder="Usuario">
+          <input type="text" id="driver-username" placeholder="Usuario" autocomplete="username">
         </div>
         <div class="form-group">
-          <input type="password" id="driver-password" placeholder="Contraseña" onkeydown="if(event.key==='Enter')driverLogin()">
+          <input type="password" id="driver-password" placeholder="Contraseña" onkeydown="if(event.key==='Enter')driverLogin()" autocomplete="current-password">
         </div>
-        <button onclick="driverLogin()" class="btn btn-primary">Entrar</button>
+        <button onclick="driverLogin()" class="btn btn-primary">Iniciar sesión</button>
+        <div style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid #e0e0e0;">
+          <p style="font-size:0.8rem;color:#999;">¿No tienes cuenta? Pide acceso a tu administrador.</p>
+          <div style="margin-top:0.75rem;display:flex;gap:0.5rem;justify-content:center;flex-wrap:wrap;">
+            <a href="/planes.html" style="font-size:0.8rem;color:#22c55e;text-decoration:none;font-weight:600;">Ver planes →</a>
+            <span style="color:#ddd;">|</span>
+            <a href="/admin.html" style="font-size:0.8rem;color:#3b82f6;text-decoration:none;font-weight:600;">Panel admin →</a>
+          </div>
+        </div>
       </div>
     </section>
 
     <!-- Instalar PWA -->
-    <section id="install-section" style="display: none;">
+    <section id="install-section" style="display:none;">
       <div class="card">
         <h2>📲 Instalar TrackMonk</h2>
         <p>Para recibir notificaciones instala la app en tu pantalla de inicio:</p>
-
-        <!-- iOS -->
         <div id="install-ios" class="install-platform" style="display:none;">
           <ol class="install-steps">
             <li>Toca <strong>Compartir</strong> (📤) abajo en Safari</li>
@@ -44,25 +53,21 @@
             <li>Toca <strong>"Agregar"</strong></li>
           </ol>
         </div>
-
-        <!-- Android / Desktop -->
         <div id="install-other" class="install-platform" style="display:none;">
-          <p style="color:#ccc; margin-bottom:0.5rem;">Puedes continuar sin instalar. Las notificaciones funcionan desde el navegador.</p>
+          <p style="color:#666;margin-bottom:0.5rem;">Puedes continuar sin instalar.</p>
         </div>
-
         <button onclick="showRegistration()" class="btn btn-primary">Continuar al registro</button>
       </div>
     </section>
 
     <!-- Registro -->
-    <section id="registration-section" style="display: none;">
+    <section id="registration-section" style="display:none;">
       <div class="card">
-        <!-- Aviso Android -->
-        <div id="android-firefox-tip" style="display:none; background:#1a3e1a; padding:0.75rem; border-radius:8px; margin-bottom:1rem;">
-          <p style="color:#66cc66; font-size:0.85rem;">🦊 <strong>Android:</strong> Para mejor funcionamiento de notificaciones, usa <strong>Firefox</strong>.</p>
+        <div id="android-firefox-tip" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;padding:0.75rem;border-radius:8px;margin-bottom:1rem;">
+          <p style="color:#16a34a;font-size:0.85rem;">🦊 <strong>Android:</strong> Para mejor funcionamiento de notificaciones, usa <strong>Firefox</strong>.</p>
         </div>
         <h2>Registrar dispositivo</h2>
-        <p>Ingresa tus datos para activar el tracking.</p>
+        <p style="color:#666;font-size:0.85rem;margin-bottom:1rem;">Ingresa los datos para activar el tracking en este dispositivo.</p>
         <div class="form-group">
           <label for="reg-device-name">Nombre del dispositivo</label>
           <input type="text" id="reg-device-name" placeholder="Ej: Samsung Galaxy S24" maxlength="100">
@@ -88,56 +93,62 @@
     </section>
 
     <!-- Ya registrado -->
-    <section id="registered-section" style="display: none;">
+    <section id="registered-section" style="display:none;">
       <div class="card" style="text-align:center;">
-        <h2>✅ Dispositivo activo</h2>
-        <p id="registered-name" style="font-size:1.1rem; margin:0.5rem 0;"></p>
-        <p style="color:#888; font-size:0.85rem;">Tu ubicación se envía cuando se solicita por notificación push.</p>
+        <div style="font-size:2rem;margin-bottom:0.5rem;">✅</div>
+        <h2>Dispositivo activo</h2>
+        <p id="registered-name" style="font-size:1.1rem;margin:0.5rem 0;font-weight:600;"></p>
+        <p style="color:#666;font-size:0.85rem;">Tu ubicación se actualiza automáticamente y cuando se solicita por notificación.</p>
+
         <button onclick="sendMyLocation()" class="btn btn-primary" style="margin-top:1rem;">📍 Enviar mi ubicación ahora</button>
 
-        <!-- Botón de emergencia -->
+        <!-- Emergencia -->
         <button onclick="showEmergencyPanel()" style="width:100%;margin-top:0.75rem;padding:1rem;background:#ef4444;color:#fff;border:none;border-radius:12px;font-size:1.1rem;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(239,68,68,0.3);">
           🚨 EMERGENCIA
         </button>
         <div id="emergency-panel" style="display:none;margin-top:0.75rem;"></div>
-        <button id="activate-push-btn" onclick="activatePush()" class="btn btn-primary" style="margin-top:0.5rem; background:#1a73e8; display:none;">🔔 Activar notificaciones push</button>
-        <button onclick="viewMyMessages()" class="btn btn-primary" style="margin-top:0.5rem; background:#fff; color:#1a1a1a; border:1px solid #e0e0e0;">
-          🔔 Mis notificaciones <span id="unread-badge" style="display:none; background:#ef4444; color:#fff; font-size:0.7rem; padding:0.1rem 0.4rem; border-radius:10px; margin-left:0.3rem;"></span>
-        </button>
-        <button onclick="viewMyHistory()" class="btn btn-primary" style="margin-top:0.5rem; background:#fff; color:#1a1a1a; border:1px solid #e0e0e0;">📋 Mi historial</button>
-        <div id="my-trip" style="display:none; margin-top:1rem; text-align:left;"></div>
-        <div id="my-messages" style="display:none; margin-top:1rem; text-align:left;"></div>
-        <p id="last-sent" style="color:#666; font-size:0.8rem; margin-top:0.5rem;"></p>
-        <div id="my-history" style="display:none; margin-top:1rem; text-align:left;"></div>
-        <button onclick="resetDevice()" class="btn btn-small" style="margin-top:1.5rem; font-size:0.75rem; color:#888;">🔄 Cambiar dispositivo / Re-registrar</button>
-        <button onclick="driverLogout()" class="btn btn-small" style="margin-top:0.5rem; font-size:0.75rem; color:#888;">🚪 Cerrar sesión</button>
-      </div>
 
-      <!-- Botón de instalar app (visible si no está instalada) -->
-      <div id="install-app-card" style="display:none; margin-top:1rem; background:#16213e; border:1px solid #1a1a4e; border-radius:12px; padding:1rem; text-align:center;">
-        <p style="font-size:0.9rem; color:#fff; margin-bottom:0.5rem;">📲 <strong>Instala TrackMonk</strong> en tu pantalla de inicio</p>
-        <button id="install-app-btn" onclick="installApp()" style="width:100%; padding:0.7rem; background:#e94560; color:#fff; border:none; border-radius:8px; font-weight:600; font-size:0.95rem; cursor:pointer;">⬇️ Instalar aplicación</button>
-        <p id="install-app-hint" style="font-size:0.8rem; color:#888; margin-top:0.5rem;"></p>
+        <button id="activate-push-btn" onclick="activatePush()" class="btn btn-primary" style="margin-top:0.5rem;background:#3b82f6;display:none;">🔔 Activar notificaciones push</button>
+
+        <div style="display:flex;gap:0.5rem;margin-top:0.75rem;">
+          <button onclick="viewMyMessages()" class="btn btn-history" style="flex:1;">
+            🔔 Notificaciones <span id="unread-badge" style="display:none;background:#ef4444;color:#fff;font-size:0.7rem;padding:0.1rem 0.4rem;border-radius:10px;margin-left:0.3rem;"></span>
+          </button>
+          <button onclick="viewMyHistory()" class="btn btn-history" style="flex:1;">📋 Historial</button>
+        </div>
+
+        <div id="my-trip" style="display:none;margin-top:1rem;text-align:left;"></div>
+        <div id="my-messages" style="display:none;margin-top:1rem;text-align:left;"></div>
+        <p id="last-sent" style="color:#999;font-size:0.8rem;margin-top:0.5rem;"></p>
+        <div id="my-history" style="display:none;margin-top:1rem;text-align:left;"></div>
+
+        <!-- Instalar app -->
+        <div id="install-app-card" style="display:none;margin-top:1rem;background:#f5f5f5;border:1px solid #e0e0e0;border-radius:12px;padding:1rem;text-align:center;">
+          <p style="font-size:0.9rem;color:#333;margin-bottom:0.5rem;">📲 <strong>Instala TrackMonk</strong> en tu pantalla</p>
+          <button id="install-app-btn" onclick="installApp()" style="width:100%;padding:0.6rem;background:#22c55e;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">⬇️ Instalar</button>
+          <p id="install-app-hint" style="font-size:0.8rem;color:#888;margin-top:0.5rem;"></p>
+        </div>
+
+        <div style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid #e0e0e0;display:flex;gap:0.5rem;justify-content:center;">
+          <button onclick="resetDevice()" class="btn btn-small">🔄 Re-registrar</button>
+          <button onclick="driverLogout()" class="btn btn-small">🚪 Cerrar sesión</button>
+        </div>
       </div>
     </section>
+
+    <!-- Footer -->
+    <footer style="text-align:center;padding:2rem 0 1rem;color:#999;font-size:0.75rem;">
+      <p>🐵 TrackMonk by <a href="https://monkeyphone.net" style="color:#22c55e;text-decoration:none;">Monkey Phone</a></p>
+      <div style="margin-top:0.5rem;display:flex;gap:1rem;justify-content:center;">
+        <a href="/planes.html" style="color:#666;text-decoration:none;font-size:0.75rem;">Planes</a>
+        <a href="/admin.html" style="color:#666;text-decoration:none;font-size:0.75rem;">Admin</a>
+        <a href="https://wa.me/525635103278" style="color:#666;text-decoration:none;font-size:0.75rem;">Soporte</a>
+      </div>
+    </footer>
+
   </div>
 
   <script src="/config.js"></script>
   <script src="/user.js"></script>
-
-  <!-- Banner de instalación (no intrusivo) -->
-  <div id="install-banner" style="display:none; position:fixed; bottom:0; left:0; right:0; background:#16213e; border-top:2px solid #e94560; padding:0.75rem; text-align:center; z-index:100;">
-    <div style="max-width:600px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; gap:0.5rem;">
-      <span style="font-size:0.85rem; color:#ccc;">📲 Agrega TrackMonk a tu pantalla de inicio desde el menú del navegador</span>
-      <button onclick="document.getElementById('install-banner').style.display='none'" style="padding:0.3rem 0.6rem; background:transparent; color:#666; border:none; cursor:pointer; font-size:1.2rem;">✕</button>
-    </div>
-  </div>
-
-  <script>
-    window.addEventListener('beforeinstallprompt', function(e) {
-      e.preventDefault();
-      window._deferredPrompt = e;
-    });
-  </script>
 </body>
 </html>
