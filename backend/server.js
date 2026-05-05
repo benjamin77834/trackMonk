@@ -709,13 +709,12 @@ app.post('/api/alerts', async (req, res) => {
 // Enviar SMS de alerta via Lambda
 function sendAlertSMS(phone, message) {
   const { exec } = require('child_process');
-  // Formatear teléfono con código de país
+  // Formatear teléfono
   var formattedPhone = phone.replace(/[^0-9]/g, '');
-  if (formattedPhone.length === 10) formattedPhone = '+52' + formattedPhone;
-  else if (!formattedPhone.startsWith('+')) formattedPhone = '+' + formattedPhone;
+  if (formattedPhone.length === 10) formattedPhone = '52' + formattedPhone;
 
-  var payload = JSON.stringify({ phone: formattedPhone, message: message });
-  var cmd = "aws lambda invoke --function-name envi_sms_python --region us-east-1 --payload '" + payload.replace(/'/g, "'\\''") + "' /tmp/sms-alert-out.json 2>&1";
+  var payload = JSON.stringify({ msisdn: formattedPhone, message: message });
+  var cmd = "aws lambda invoke --function-name envi_sms_python --region us-east-1 --invocation-type Event --payload '" + payload.replace(/'/g, "'\\''") + "' /tmp/sms-alert-out.json 2>&1";
 
   exec(cmd, function(err, stdout, stderr) {
     if (err) console.error('SMS Lambda error:', err.message);
