@@ -689,17 +689,39 @@ app.post('/api/alerts', async (req, res) => {
     conn = await pool.getConnection();
     const result = await conn.query('INSERT INTO alerts (device_id, alert_type, message, latitude, longitude, accuracy) VALUES (?, ?, ?, ?, ?, ?)',
       [deviceId, alert_type, message || '', latitude || null, longitude || null, accuracy || null]);
-    // Log de alerta para notificación
-    const devices = await conn.query('SELECT d.*, c.contact_email FROM devices d JOIN companies c ON c.id=d.company_id WHERE d.id=?', [deviceId]);
+    // Notificar por SMS al admin de la empresa
+    const devices = await conn.query('SELECT d.*, c.contact_email, c.contact_phone FROM devices d JOIN companies c ON c.id=d.company_id WHERE d.id=?', [deviceId]);
     if (devices.length > 0) {
       const d = devices[0];
       const typeLabels = { accident:'ACCIDENTE', robbery:'ROBO/ASALTO', breakdown:'AVERIA', help:'AUXILIO' };
-      console.log('🚨 ALERTA: ' + (typeLabels[alert_type]||alert_type) + ' - ' + (d.person_name||d.device_name) + ' - ' + (d.phone||'') + (latitude ? ' - https://www.google.com/maps?q='+latitude+','+longitude : ''));
+      const alertMsg = '🚨 ALERTA ' + (typeLabels[alert_type]||alert_type) + ' - ' + (d.person_name||d.device_name) + (d.phone ? ' Tel:'+d.phone : '') + (latitude ? ' Maps:https://www.google.com/maps?q='+latitude+','+longitude : '');
+      console.log(alertMsg);
+      // Enviar SMS via Lambda si hay teléfono de contacto de la empresa
+      if (d.contact_phone) {
+        sendAlertSMS(d.contact_phone, alertMsg);
+      }
     }
     res.json({ success: true, alertId: Number(result.insertId) });
   } catch (err) { res.status(500).json({ error: 'Error interno' }); }
   finally { if (conn) conn.release(); }
 });
+
+// Enviar SMS de alerta via Lambda
+function sendAlertSMS(phone, message) {
+  const { exec } = require('child_process');
+  // Formatear teléfono con código de país
+  var formattedPhone = phone.replace(/[^0-9]/g, '');
+  if (formattedPhone.length === 10) formattedPhone = '+52' + formattedPhone;
+  else if (!formattedPhone.startsWith('+')) formattedPhone = '+' + formattedPhone;
+
+  var payload = JSON.stringify({ phone: formattedPhone, message: message });
+  var cmd = "aws lambda invoke --function-name envi_sms_python --region us-east-1 --payload '" + payload.replace(/'/g, "'\\''") + "' /tmp/sms-alert-out.json 2>&1";
+
+  exec(cmd, function(err, stdout, stderr) {
+    if (err) console.error('SMS Lambda error:', err.message);
+    else console.log('SMS enviado a ' + formattedPhone);
+  });
+}
 
 app.get('/api/alerts', auth, async (req, res) => {
   const { status } = req.query;
