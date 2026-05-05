@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
     <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-    <string>TrackMonk necesita tu ubicación para el tracking GPS de tu vehículo, incluso en segundo plano.</string>
+    <string>TrackMonk necesita tu ubicación para tracking GPS de tu vehículo en segundo plano.</string>
     <key>NSLocationWhenInUseUsageDescription</key>
-    <string>TrackMonk necesita tu ubicación para el tracking GPS.</string>
+    <string>TrackMonk necesita tu ubicación para tracking GPS.</string>
     <key>NSLocationAlwaysUsageDescription</key>
-    <string>TrackMonk necesita acceso a tu ubicación en segundo plano para tracking continuo.</string>
+    <string>TrackMonk necesita ubicación en segundo plano para tracking continuo.</string>
     <key>UIBackgroundModes</key>
     <array>
         <string>location</string>
