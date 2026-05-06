@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import WatchConnectivity
 
 class APIManager: ObservableObject {
     static let shared = APIManager()
@@ -41,7 +42,14 @@ class APIManager: ObservableObject {
         post("/api/devices/register", body: ["deviceName": name, "companySlug": companySlug, "userId": userId]) { json in
             if let json = json, let did = json["deviceId"] as? Int {
                 UserDefaults.standard.set("\(did)", forKey: "deviceId")
+                self.syncToWatch()
             }
+        }
+    }
+    
+    func syncToWatch() {
+        if WCSession.isSupported() && WCSession.default.activationState == .activated {
+            try? WCSession.default.updateApplicationContext(["deviceId": deviceId])
         }
     }
     
