@@ -92,6 +92,16 @@ struct ContentView: View {
                             .cornerRadius(12).bold().font(.title3)
                     }
                     
+                    // Mensajes
+                    if api.unreadCount > 0 || !api.messages.isEmpty {
+                        MessagesSection(api: api)
+                    }
+                    
+                    // Viaje activo
+                    if api.activeTrip != nil {
+                        TripSection(api: api)
+                    }
+                    
                     // Logout
                     Button("Cerrar sesión") { logout() }
                         .font(.caption).foregroundColor(.secondary).padding(.top, 20)
@@ -102,6 +112,7 @@ struct ContentView: View {
             .sheet(isPresented: $showEmergency) {
                 EmergencySheet(api: api, location: location, show: $showEmergency)
             }
+            .onAppear { api.checkMessages(); api.loadActiveTrip() }
         }
     }
     
@@ -181,5 +192,154 @@ struct EmergencySheet: View {
         let loc = location.lastLocation
         api.sendAlert(type: type, message: message, lat: loc?.coordinate.latitude, lng: loc?.coordinate.longitude, acc: loc?.horizontalAccuracy)
         show = false
+    }
+}
+
+
+// MARK: - Messages Section
+
+struct MessagesSection: View {
+    @ObservedObject var api: APIManager
+    @State private var expanded = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button(action: { expanded.toggle() }) {
+                HStack {
+                    Text("🔔 Notificaciones")
+                        .font(.headline)
+                    if api.unreadCount > 0 {
+                        Text("\(api.unreadCount)")
+                            .font(.caption).bold()
+                            .padding(.horizontal, 8).padding(.vertical, 2)
+                            .background(Color.red).foregroundColor(.white)
+                            .cornerRadius(10)
+                    }
+                    Spacer()
+                    Image(systemName: expanded ? "chevron.up" : "chevron.down")
+                        .foregroundColor(.secondary)
+                }
+            }
+            .foregroundColor(.primary)
+            
+            if expanded {
+                if api.messages.isEmpty {
+                    Text("Sin notificaciones").font(.caption).foregroundColor(.secondary)
+                } else {
+                    ForEach(api.messages.indices, id: \.self) { i in
+                        let msg = api.messages[i]
+                        let isUnread = (msg["is_read"] as? Int ?? 0) == 0
+                        HStack(alignment: .top) {
+                            Circle().fill(isUnread ? Color.green : Color.gray.opacity(0.3))
+                                .frame(width: 8, height: 8).padding(.top, 6)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(msg["title"] as? String ?? "").font(.subheadline).bold()
+                                Text(msg["body"] as? String ?? "").font(.caption).foregroundColor(.secondary)
+                            }
+                            Spacer()
+                        }
+                        .padding(.vertical, 4)
+                        .onTapGesture {
+                            if let id = msg["id"] as? Int { api.markRead(messageId: id) }
+                        }
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(Color(.systemBackground))
+        .cornerRadius(12)
+        .shadow(radius: 2)
+    }
+}
+
+// MARK: - Trip Section
+
+struct TripSection: View {
+    @ObservedObject var api: APIManager
+    @State private var concept = "Gasolina"
+    @State private var amount = ""
+    @State private var note = ""
+    
+    let costTypes = ["Gasolina", "Caseta", "Comida", "Hospedaje", "Mantenimiento", "Otro"]
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("🚛 Viaje activo").font(.headline)
+            
+            if let trip = api.activeTrip {
+                // Route
+                HStack {
+                    Circle().fill(Color.green).frame(width: 10, height: 10)
+                    Text(trip["origin"] as? String ?? "").font(.caption)
+                    Rectangle().fill(Color.gray.opacity(0.3)).frame(height: 2)
+                    Text(trip["destination"] as? String ?? "").font(.caption)
+                    Circle().fill(Color.red).frame(width: 10, height: 10)
+                }
+                
+                if let cargo = trip["cargo"] as? String, !cargo.isEmpty {
+                    Text("📦 \(cargo)").font(.caption).foregroundColor(.secondary)
+                }
+                
+                // Total cost
+                let total = api.tripCosts.reduce(0.0) { $0 + (Double("\($1["amount"] ?? 0)") ?? 0) }
+                Text("$\(total, specifier: "%.2f")")
+                    .font(.title).bold()
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .background(Color.green.opacity(0.1))
+                    .cornerRadius(8)
+                
+                // Costs list
+                ForEach(api.tripCosts.indices, id: \.self) { i in
+                    let c = api.tripCosts[i]
+                    HStack {
+                        Text(c["concept"] as? String ?? "").font(.caption)
+                        Spacer()
+                        Text("$\(Double("\(c["amount"] ?? 0)") ?? 0, specifier: "%.2f")")
+                            .font(.caption).bold()
+                    }
+                    .padding(.vertical, 2)
+                    Divider()
+                }
+                
+                // Add cost
+                VStack(spacing: 8) {
+                    Text("Agregar gasto").font(.subheadline).bold()
+                    Picker("Tipo", selection: $concept) {
+                        ForEach(costTypes, id: \.self) { Text($0) }
+                    }.pickerStyle(.menu)
+                    
+                    HStack {
+                        TextField("Monto $", text: $amount)
+                            .keyboardType(.decimalPad)
+                            .textFieldStyle(.roundedBorder)
+                        TextField("Nota", text: $note)
+                            .textFieldStyle(.roundedBorder)
+                    }
+                    
+                    Button(action: addCost) {
+                        Text("Agregar")
+                            .frame(maxWidth: .infinity).padding(.vertical, 10)
+                            .background(Color.green).foregroundColor(.white)
+                            .cornerRadius(8).bold()
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(Color(.systemBackground))
+        .cornerRadius(12)
+        .shadow(radius: 2)
+    }
+    
+    func addCost() {
+        guard let tripId = api.activeTrip?["id"] as? Int,
+              let amt = Double(amount), amt > 0 else { return }
+        let fullConcept = note.isEmpty ? concept : "\(concept) - \(note)"
+        api.addTripCost(tripId: tripId, concept: fullConcept, amount: amt) { _ in
+            amount = ""
+            note = ""
+        }
     }
 }

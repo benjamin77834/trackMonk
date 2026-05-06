@@ -1,0 +1,32 @@
+name: TrackMonkApp
+options:
+  bundleIdPrefix: com.monkeyphone
+  deploymentTarget:
+    iOS: "16.0"
+targets:
+  TrackMonkApp:
+    type: application
+    platform: iOS
+    sources:
+      - sources
+    settings:
+      base:
+        INFOPLIST_FILE: sources/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.monkeyphone.trackmonk
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        DEVELOPMENT_TEAM: ""
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait"
+        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "TrackMonk necesita tu ubicación para tracking GPS."
+        INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription: "TrackMonk necesita tu ubicación en segundo plano para tracking continuo."
+        INFOPLIST_KEY_UIBackgroundModes: "location"
+      configs:
+        debug:
+          CODE_SIGN_IDENTITY: "Apple Development"
+        release:
+          CODE_SIGN_IDENTITY: "Apple Development"
+    entitlements:
+      path: TrackMonkApp.entitlements
+      properties: {}

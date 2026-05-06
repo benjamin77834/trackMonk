@@ -1,5 +1,6 @@
 import Foundation
 import CoreLocation
+import UserNotifications
 
 class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     private let mgr = CLLocationManager()
@@ -53,5 +54,24 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         guard let loc = lastLocation else { return }
         APIManager.shared.sendLocation(lat: loc.coordinate.latitude, lng: loc.coordinate.longitude, acc: loc.horizontalAccuracy)
         DispatchQueue.main.async { self.lastSentTime = Date() }
+        
+        // Revisar mensajes nuevos y mostrar notificación con sonido
+        APIManager.shared.checkMessages()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            if APIManager.shared.unreadCount > 0 {
+                self.showLocalNotification(count: APIManager.shared.unreadCount)
+            }
+        }
+    }
+    
+    private func showLocalNotification(count: Int) {
+        let content = UNMutableNotificationContent()
+        content.title = "🐵 TrackMonk"
+        content.body = "Tienes \(count) mensaje\(count > 1 ? "s" : "") nuevo\(count > 1 ? "s" : "")"
+        content.sound = .default
+        content.badge = NSNumber(value: count)
+        
+        let request = UNNotificationRequest(identifier: "msg-\(Int(Date().timeIntervalSince1970))", content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request)
     }
 }
