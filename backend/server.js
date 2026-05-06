@@ -69,8 +69,11 @@ app.post('/api/auth/driver-login', async (req, res) => {
     if (rows.length === 0) return res.status(401).json({ error: 'Credenciales inválidas' });
     const user = rows[0];
     if (user.password_hash !== hashPass(password)) return res.status(401).json({ error: 'Credenciales inválidas' });
-    // Buscar si ya tiene dispositivo vinculado
-    const devices = await conn.query('SELECT id FROM devices WHERE user_id=?', [user.id]);
+    // Verificar si el dispositivo está bloqueado
+    const devices = await conn.query('SELECT id, is_blocked FROM devices WHERE user_id=?', [user.id]);
+    if (devices.length > 0 && devices[0].is_blocked) {
+      return res.status(403).json({ error: 'Dispositivo bloqueado. Contacta al administrador.' });
+    }
     res.json({
       success: true,
       userId: user.id,
@@ -80,6 +83,18 @@ app.post('/api/auth/driver-login', async (req, res) => {
       companySlug: user.company_slug,
       deviceId: devices.length > 0 ? devices[0].id : null,
     });
+  } catch (err) { res.status(500).json({ error: 'Error interno' }); }
+  finally { if (conn) conn.release(); }
+});
+
+// Bloquear/desbloquear dispositivo (admin)
+app.put('/api/devices/:id/block', auth, async (req, res) => {
+  const { blocked } = req.body;
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    await conn.query('UPDATE devices SET is_blocked=? WHERE id=?', [blocked ? 1 : 0, req.params.id]);
+    res.json({ success: true });
   } catch (err) { res.status(500).json({ error: 'Error interno' }); }
   finally { if (conn) conn.release(); }
 });

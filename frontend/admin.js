@@ -194,6 +194,7 @@ async function loadDevices() {
           '<button onclick="viewOnMap(' + d.id + ')" class="btn btn-secondary btn-sm">🗺️</button>' +
           '<button onclick="viewHistory(' + d.id + ')" class="btn btn-secondary btn-sm">📋</button>' +
           '<button onclick="editDevice(' + d.id + ')" class="btn btn-secondary btn-sm">✏️</button>' +
+          '<button onclick="toggleBlock(' + d.id + ')" class="btn btn-secondary btn-sm" title="Bloquear/Desbloquear">🔒</button>' +
           '<button onclick="deleteDevice(' + d.id + ')" class="btn btn-danger btn-sm">🗑️</button>' +
         '</div></div>';
     });
@@ -217,6 +218,19 @@ async function deleteDevice(id) {
   if (!confirm('¿Eliminar "' + (d ? d.person_name || d.device_name : id) + '" y todo su historial?')) return;
   await af(API_BASE + '/api/devices/' + id, { method: 'DELETE' });
   updateStatus('Eliminado', 'success');
+  loadDevices();
+}
+
+async function toggleBlock(id) {
+  var d = allDevices.find(function(x) { return x.id === id; });
+  var isBlocked = d && d.is_blocked;
+  var action = isBlocked ? 'desbloquear' : 'bloquear';
+  if (!confirm('¿' + action.charAt(0).toUpperCase() + action.slice(1) + ' "' + (d ? d.person_name || d.device_name : id) + '"?')) return;
+  await af(API_BASE + '/api/devices/' + id + '/block', {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ blocked: !isBlocked }),
+  });
+  updateStatus(isBlocked ? 'Desbloqueado ✓' : '🔒 Bloqueado', isBlocked ? 'success' : 'warning');
   loadDevices();
 }
 
