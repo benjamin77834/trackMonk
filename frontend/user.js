@@ -138,6 +138,7 @@ async function showRegistered() {
 
   loadMyTrip();
   loadUnreadCount();
+  setInterval(loadUnreadCount, 30000);
 }
 
 // ============ REGISTRO ============
@@ -249,8 +250,42 @@ async function loadUnreadCount() {
   if (!deviceId) return;
   try { var res = await fetch(API_BASE + '/api/my-messages/' + deviceId + '/unread'); var data = await res.json();
     var badge = document.getElementById('unread-badge');
-    if (badge && data.count > 0) { badge.textContent = data.count; badge.style.display = 'inline'; }
+    var prevCount = parseInt(badge ? badge.textContent : '0') || 0;
+    if (badge && data.count > 0) {
+      badge.textContent = data.count;
+      badge.style.display = 'inline';
+      // Sonar si hay nuevos mensajes
+      if (data.count > prevCount) playNotificationSound();
+    }
     else if (badge) { badge.style.display = 'none'; }
+  } catch(e) {}
+}
+
+function playNotificationSound() {
+  try {
+    var ctx = new (window.AudioContext || window.webkitAudioContext)();
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 880;
+    osc.type = 'sine';
+    gain.gain.value = 0.3;
+    osc.start();
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+    osc.stop(ctx.currentTime + 0.3);
+    // Segundo tono
+    setTimeout(function() {
+      var osc2 = ctx.createOscillator();
+      var gain2 = ctx.createGain();
+      osc2.connect(gain2); gain2.connect(ctx.destination);
+      osc2.frequency.value = 1100;
+      osc2.type = 'sine';
+      gain2.gain.value = 0.3;
+      osc2.start();
+      gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+      osc2.stop(ctx.currentTime + 0.3);
+    }, 150);
   } catch(e) {}
 }
 
