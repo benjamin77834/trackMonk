@@ -16,7 +16,7 @@
 /* Begin PBXFileReference section */
 		054D9BD99E96141E1139624E /* TrackMonkApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackMonkApp.swift; sourceTree = "<group>"; };
 		2B35CD3C5704221E2E5A2F11 /* APIManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIManager.swift; sourceTree = "<group>"; };
-		4CC0031F0F2C19582A9E33A0 /* TrackMonkApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TrackMonkApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4CC0031F0F2C19582A9E33A0 /* TrackMonkApp.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TrackMonkApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		56C49DD1D20361B75443F207 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
 		B02FA3B6A9F5911FB3062EB3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		B69DF90F33A44DB616D8E52D /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -79,6 +79,11 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					3BBEBAE0B043A3CCE4A01AA2 = {
+						DevelopmentTeam = "";
+					};
+				};
 			};
 			buildConfigurationList = 452891F717464412A1832D13 /* Build configuration list for PBXProject "TrackMonkApp" */;
 			developmentRegion = en;
@@ -240,7 +245,7 @@
 				CODE_SIGN_ENTITLEMENTS = TrackMonkApp.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = MW8RXK66UP;
+				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = sources/Info.plist;
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "TrackMonk necesita tu ubicación en segundo plano para tracking continuo.";
@@ -266,7 +271,7 @@
 				CODE_SIGN_ENTITLEMENTS = TrackMonkApp.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = MW8RXK66UP;
+				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = sources/Info.plist;
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "TrackMonk necesita tu ubicación en segundo plano para tracking continuo.";

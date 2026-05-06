@@ -98,6 +98,13 @@ class APIManager: ObservableObject {
         }
     }
     
+    func replyToMessage(messageId: Int, reply: String, completion: @escaping (Bool) -> Void) {
+        post("/api/my-messages/\(messageId)/reply", body: ["reply": reply]) { json in
+            let ok = json?["success"] as? Bool ?? false
+            DispatchQueue.main.async { completion(ok) }
+        }
+    }
+    
     // MARK: - Trips
     
     func loadActiveTrip() {

@@ -201,13 +201,13 @@ struct EmergencySheet: View {
 struct MessagesSection: View {
     @ObservedObject var api: APIManager
     @State private var expanded = false
+    @State private var replyText: [Int: String] = [:]
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Button(action: { expanded.toggle() }) {
+            Button(action: { expanded.toggle(); if expanded { api.checkMessages() } }) {
                 HStack {
-                    Text("🔔 Notificaciones")
-                        .font(.headline)
+                    Text("🔔 Notificaciones").font(.headline)
                     if api.unreadCount > 0 {
                         Text("\(api.unreadCount)")
                             .font(.caption).bold()
@@ -216,11 +216,9 @@ struct MessagesSection: View {
                             .cornerRadius(10)
                     }
                     Spacer()
-                    Image(systemName: expanded ? "chevron.up" : "chevron.down")
-                        .foregroundColor(.secondary)
+                    Image(systemName: expanded ? "chevron.up" : "chevron.down").foregroundColor(.secondary)
                 }
-            }
-            .foregroundColor(.primary)
+            }.foregroundColor(.primary)
             
             if expanded {
                 if api.messages.isEmpty {
@@ -228,20 +226,49 @@ struct MessagesSection: View {
                 } else {
                     ForEach(api.messages.indices, id: \.self) { i in
                         let msg = api.messages[i]
+                        let msgId = msg["id"] as? Int ?? 0
                         let isUnread = (msg["is_read"] as? Int ?? 0) == 0
-                        HStack(alignment: .top) {
-                            Circle().fill(isUnread ? Color.green : Color.gray.opacity(0.3))
-                                .frame(width: 8, height: 8).padding(.top, 6)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(msg["title"] as? String ?? "").font(.subheadline).bold()
-                                Text(msg["body"] as? String ?? "").font(.caption).foregroundColor(.secondary)
+                        let existingReply = msg["reply"] as? String
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            HStack(alignment: .top) {
+                                Circle().fill(isUnread ? Color.green : Color.gray.opacity(0.3))
+                                    .frame(width: 8, height: 8).padding(.top, 6)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(msg["title"] as? String ?? "").font(.subheadline).bold()
+                                    Text(msg["body"] as? String ?? "").font(.caption).foregroundColor(.secondary)
+                                }
+                                Spacer()
                             }
-                            Spacer()
+                            
+                            if let reply = existingReply, !reply.isEmpty {
+                                HStack {
+                                    Image(systemName: "arrowshape.turn.up.left.fill").font(.caption2).foregroundColor(.blue)
+                                    Text(reply).font(.caption).foregroundColor(.blue)
+                                }
+                                .padding(.horizontal, 8).padding(.vertical, 4)
+                                .background(Color.blue.opacity(0.1)).cornerRadius(6)
+                            } else {
+                                HStack(spacing: 4) {
+                                    TextField("Responder...", text: Binding(
+                                        get: { replyText[msgId] ?? "" },
+                                        set: { replyText[msgId] = $0 }
+                                    ))
+                                    .textFieldStyle(.roundedBorder)
+                                    .font(.caption)
+                                    
+                                    Button(action: { sendReply(messageId: msgId) }) {
+                                        Image(systemName: "paperplane.fill")
+                                            .foregroundColor(.white)
+                                            .padding(6)
+                                            .background(Color.green)
+                                            .cornerRadius(6)
+                                    }
+                                }
+                            }
                         }
                         .padding(.vertical, 4)
-                        .onTapGesture {
-                            if let id = msg["id"] as? Int { api.markRead(messageId: id) }
-                        }
+                        Divider()
                     }
                 }
             }
@@ -250,6 +277,16 @@ struct MessagesSection: View {
         .background(Color(.systemBackground))
         .cornerRadius(12)
         .shadow(radius: 2)
+    }
+    
+    func sendReply(messageId: Int) {
+        guard let text = replyText[messageId], !text.isEmpty else { return }
+        api.replyToMessage(messageId: messageId, reply: text) { success in
+            if success {
+                replyText[messageId] = nil
+                api.checkMessages()
+            }
+        }
     }
 }
 
