@@ -141,6 +141,16 @@ class APIManager: ObservableObject {
         }
     }
     
+    func completeMyTrip(tripId: Int, completion: @escaping (Bool) -> Void) {
+        put("/api/my-trips/\(tripId)/complete") { json in
+            let ok = json?["success"] as? Bool ?? false
+            DispatchQueue.main.async {
+                if ok { self.activeTrip = nil; self.tripCosts = [] }
+                completion(ok)
+            }
+        }
+    }
+    
     func logout() {
         driverName = ""
         userId = ""

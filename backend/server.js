@@ -893,6 +893,16 @@ app.post('/api/my-trips/:tripId/costs', async (req, res) => {
   finally { if (conn) conn.release(); }
 });
 
+app.put('/api/my-trips/:tripId/complete', async (req, res) => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    await conn.query("UPDATE trips SET status='completed', completed_at=NOW() WHERE id=?", [req.params.tripId]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: 'Error interno' }); }
+  finally { if (conn) conn.release(); }
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log('TrackMonk API v2 corriendo en puerto ' + PORT);
 });

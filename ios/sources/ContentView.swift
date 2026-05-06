@@ -361,6 +361,13 @@ struct TripSection: View {
                             .background(Color.green).foregroundColor(.white)
                             .cornerRadius(8).bold()
                     }
+                    
+                    Button(action: completeTrip) {
+                        Text("✅ Terminar viaje")
+                            .frame(maxWidth: .infinity).padding(.vertical, 10)
+                            .background(Color.red).foregroundColor(.white)
+                            .cornerRadius(8).bold()
+                    }
                 }
             }
         }
@@ -378,5 +385,10 @@ struct TripSection: View {
             amount = ""
             note = ""
         }
+    }
+    
+    func completeTrip() {
+        guard let tripId = api.activeTrip?["id"] as? Int else { return }
+        api.completeMyTrip(tripId: tripId) { _ in }
     }
 }
