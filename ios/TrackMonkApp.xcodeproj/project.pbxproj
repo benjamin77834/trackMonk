@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1733500B1A109A5CFFFD0789 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C4C9099DFF36DB8FFF14884E /* Assets.xcassets */; };
+		71D9267BBA9BD00A4CCB667C /* gorila.png in Resources */ = {isa = PBXBuildFile; fileRef = C8CCBDF5F58183F54F94C77D /* gorila.png */; };
 		8D6733E3A48CF858F799719C /* TrackMonkApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 054D9BD99E96141E1139624E /* TrackMonkApp.swift */; };
 		B869834F9AAB5588927C666D /* APIManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B35CD3C5704221E2E5A2F11 /* APIManager.swift */; };
 		D9CF016EBD15A30443AC0136 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B69DF90F33A44DB616D8E52D /* ContentView.swift */; };
@@ -20,6 +22,8 @@
 		56C49DD1D20361B75443F207 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
 		B02FA3B6A9F5911FB3062EB3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		B69DF90F33A44DB616D8E52D /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		C4C9099DFF36DB8FFF14884E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		C8CCBDF5F58183F54F94C77D /* gorila.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = gorila.png; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -27,7 +31,9 @@
 			isa = PBXGroup;
 			children = (
 				2B35CD3C5704221E2E5A2F11 /* APIManager.swift */,
+				C4C9099DFF36DB8FFF14884E /* Assets.xcassets */,
 				B69DF90F33A44DB616D8E52D /* ContentView.swift */,
+				C8CCBDF5F58183F54F94C77D /* gorila.png */,
 				B02FA3B6A9F5911FB3062EB3 /* Info.plist */,
 				56C49DD1D20361B75443F207 /* LocationManager.swift */,
 				054D9BD99E96141E1139624E /* TrackMonkApp.swift */,
@@ -59,6 +65,7 @@
 			buildConfigurationList = D7D8F306FAC5B995E2A692CD /* Build configuration list for PBXNativeTarget "TrackMonkApp" */;
 			buildPhases = (
 				42E1F00851A93F231D1D472A /* Sources */,
+				84DEB0CBFC03CB457477C22F /* Resources */,
 			);
 			buildRules = (
 			);
@@ -103,6 +110,18 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		84DEB0CBFC03CB457477C22F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1733500B1A109A5CFFFD0789 /* Assets.xcassets in Resources */,
+				71D9267BBA9BD00A4CCB667C /* gorila.png in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		42E1F00851A93F231D1D472A /* Sources */ = {
