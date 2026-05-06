@@ -750,15 +750,15 @@ app.post('/api/alerts', async (req, res) => {
 
 // Enviar SMS de alerta via Lambda
 function sendAlertSMS(phone, message) {
-  const { exec } = require('child_process');
+  const { spawn } = require('child_process');
   var formattedPhone = phone.replace(/[^0-9]/g, '');
 
-  var pythonCmd = 'python3 -c "import boto3,json; c=boto3.client(\'lambda\',region_name=\'us-east-1\'); c.invoke(FunctionName=\'envi_sms_python\',InvocationType=\'Event\',Payload=json.dumps({\'msisdn\':\'' + formattedPhone + '\',\'message\':\'' + message.replace(/'/g, '') + '\'}))"';
+  var script = 'import boto3,json; c=boto3.client("lambda",region_name="us-east-1"); r=c.invoke(FunctionName="envi_sms_python",InvocationType="Event",Payload=json.dumps({"msisdn":"' + formattedPhone + '","message":"' + message.replace(/"/g, '\\"').replace(/\n/g, ' ').substring(0, 140) + '"})); print(r["StatusCode"])';
 
-  exec(pythonCmd, function(err, stdout, stderr) {
-    if (err) console.error('SMS error:', err.message);
-    else console.log('SMS enviado a ' + formattedPhone);
-  });
+  var proc = spawn('python3', ['-c', script], { env: Object.assign({}, process.env, { HOME: '/home/ec2-user' }) });
+  proc.stdout.on('data', function(data) { console.log('SMS resultado: ' + data.toString().trim()); });
+  proc.stderr.on('data', function(data) { console.error('SMS error: ' + data.toString().trim()); });
+  proc.on('close', function(code) { if (code !== 0) console.error('SMS proceso terminó con código: ' + code); });
 }
 
 app.get('/api/alerts', auth, async (req, res) => {
