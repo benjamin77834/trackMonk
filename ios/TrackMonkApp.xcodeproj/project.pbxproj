@@ -8,6 +8,10 @@
 
 /* Begin PBXBuildFile section */
 		1733500B1A109A5CFFFD0789 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C4C9099DFF36DB8FFF14884E /* Assets.xcassets */; };
+		210B4C9EF66AEE471670F380 /* WatchLocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BBE9F89AEBF492F23DEC39C /* WatchLocationManager.swift */; };
+		5255B23D14CCD256EA9E229B /* WatchContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E3BB04DBBE66942EFE3B846 /* WatchContentView.swift */; };
+		5D86839F9F4F7D5B7523A9E2 /* TrackMonkWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36A6702D8E17CC8331003BD6 /* TrackMonkWatchApp.swift */; };
+		87F590E62823CD04E08E1B80 /* WatchAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D8C5E371F83CF7CE3E9080B /* WatchAPI.swift */; };
 		8D6733E3A48CF858F799719C /* TrackMonkApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 054D9BD99E96141E1139624E /* TrackMonkApp.swift */; };
 		B869834F9AAB5588927C666D /* APIManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B35CD3C5704221E2E5A2F11 /* APIManager.swift */; };
 		D9CF016EBD15A30443AC0136 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B69DF90F33A44DB616D8E52D /* ContentView.swift */; };
@@ -16,9 +20,14 @@
 
 /* Begin PBXFileReference section */
 		054D9BD99E96141E1139624E /* TrackMonkApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackMonkApp.swift; sourceTree = "<group>"; };
+		1E3BB04DBBE66942EFE3B846 /* WatchContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchContentView.swift; sourceTree = "<group>"; };
 		2B35CD3C5704221E2E5A2F11 /* APIManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIManager.swift; sourceTree = "<group>"; };
-		4CC0031F0F2C19582A9E33A0 /* TrackMonkApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TrackMonkApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		30DE71F509027A67443F642C /* TrackMonkWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TrackMonkWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		36A6702D8E17CC8331003BD6 /* TrackMonkWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackMonkWatchApp.swift; sourceTree = "<group>"; };
+		4CC0031F0F2C19582A9E33A0 /* TrackMonkApp.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TrackMonkApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		56C49DD1D20361B75443F207 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
+		5BBE9F89AEBF492F23DEC39C /* WatchLocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchLocationManager.swift; sourceTree = "<group>"; };
+		9D8C5E371F83CF7CE3E9080B /* WatchAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAPI.swift; sourceTree = "<group>"; };
 		B02FA3B6A9F5911FB3062EB3 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		B69DF90F33A44DB616D8E52D /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		C4C9099DFF36DB8FFF14884E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -42,6 +51,7 @@
 			isa = PBXGroup;
 			children = (
 				54166C947250C9E429610704 /* sources */,
+				A9E986B84DC02369DFAC43B1 /* watch */,
 				9917A103E360BB1C651EAE18 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -50,8 +60,20 @@
 			isa = PBXGroup;
 			children = (
 				4CC0031F0F2C19582A9E33A0 /* TrackMonkApp.app */,
+				30DE71F509027A67443F642C /* TrackMonkWatch.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		A9E986B84DC02369DFAC43B1 /* watch */ = {
+			isa = PBXGroup;
+			children = (
+				36A6702D8E17CC8331003BD6 /* TrackMonkWatchApp.swift */,
+				9D8C5E371F83CF7CE3E9080B /* WatchAPI.swift */,
+				1E3BB04DBBE66942EFE3B846 /* WatchContentView.swift */,
+				5BBE9F89AEBF492F23DEC39C /* WatchLocationManager.swift */,
+			);
+			path = watch;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -75,6 +97,23 @@
 			productReference = 4CC0031F0F2C19582A9E33A0 /* TrackMonkApp.app */;
 			productType = "com.apple.product-type.application";
 		};
+		4BC2F42C3FDB8B91AF43BD14 /* TrackMonkWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 74153ADB1AA6ECE3542BA7BB /* Build configuration list for PBXNativeTarget "TrackMonkWatch" */;
+			buildPhases = (
+				4464D916CB8F2F8BB248D511 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = TrackMonkWatch;
+			packageProductDependencies = (
+			);
+			productName = TrackMonkWatch;
+			productReference = 30DE71F509027A67443F642C /* TrackMonkWatch.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -83,6 +122,14 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					3BBEBAE0B043A3CCE4A01AA2 = {
+						DevelopmentTeam = "";
+					};
+					4BC2F42C3FDB8B91AF43BD14 = {
+						DevelopmentTeam = "";
+					};
+				};
 			};
 			buildConfigurationList = 452891F717464412A1832D13 /* Build configuration list for PBXProject "TrackMonkApp" */;
 			developmentRegion = en;
@@ -99,6 +146,7 @@
 			projectRoot = "";
 			targets = (
 				3BBEBAE0B043A3CCE4A01AA2 /* TrackMonkApp */,
+				4BC2F42C3FDB8B91AF43BD14 /* TrackMonkWatch */,
 			);
 		};
 /* End PBXProject section */
@@ -126,9 +174,37 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		4464D916CB8F2F8BB248D511 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5D86839F9F4F7D5B7523A9E2 /* TrackMonkWatchApp.swift in Sources */,
+				87F590E62823CD04E08E1B80 /* WatchAPI.swift in Sources */,
+				5255B23D14CCD256EA9E229B /* WatchContentView.swift in Sources */,
+				210B4C9EF66AEE471670F380 /* WatchLocationManager.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
+		1F8F10B1562E4375BF877E2B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.monkeyphone.trackmonk;
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.monkeyphone.trackmonk.watch;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 4;
+			};
+			name = Release;
+		};
 		495D956DA0F75F1631DD29AF /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -185,10 +261,10 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
+				WATCHOS_DEPLOYMENT_TARGET = 9.0;
 			};
 			name = Debug;
 		};
@@ -241,10 +317,10 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
+				WATCHOS_DEPLOYMENT_TARGET = 9.0;
 			};
 			name = Release;
 		};
@@ -255,14 +331,14 @@
 				CODE_SIGN_ENTITLEMENTS = TrackMonkApp.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = MW8RXK66UP;
+				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = sources/Info.plist;
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "TrackMonk necesita tu ubicación en segundo plano para tracking continuo.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "TrackMonk necesita tu ubicación para tracking GPS.";
 				INFOPLIST_KEY_UIBackgroundModes = location;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -274,6 +350,23 @@
 			};
 			name = Debug;
 		};
+		753D79ED74DF3FFF01CB1E88 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.monkeyphone.trackmonk;
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.monkeyphone.trackmonk.watch;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 4;
+			};
+			name = Debug;
+		};
 		ECBABA8276631B2F853A62E3 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -281,14 +374,14 @@
 				CODE_SIGN_ENTITLEMENTS = TrackMonkApp.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = MW8RXK66UP;
+				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = sources/Info.plist;
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "TrackMonk necesita tu ubicación en segundo plano para tracking continuo.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "TrackMonk necesita tu ubicación para tracking GPS.";
 				INFOPLIST_KEY_UIBackgroundModes = location;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -308,6 +401,15 @@
 			buildConfigurations = (
 				495D956DA0F75F1631DD29AF /* Debug */,
 				5E24EE0F003685BAA6102F1F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		74153ADB1AA6ECE3542BA7BB /* Build configuration list for PBXNativeTarget "TrackMonkWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				753D79ED74DF3FFF01CB1E88 /* Debug */,
+				1F8F10B1562E4375BF877E2B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
