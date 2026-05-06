@@ -672,6 +672,18 @@ app.put('/api/my-messages/:id/read', async (req, res) => {
   finally { if (conn) conn.release(); }
 });
 
+app.post('/api/my-messages/:id/reply', async (req, res) => {
+  const { reply } = req.body;
+  if (!reply) return res.status(400).json({ error: 'reply requerido' });
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    await conn.query('UPDATE messages SET reply=?, replied_at=NOW(), is_read=1 WHERE id=?', [reply, req.params.id]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: 'Error interno' }); }
+  finally { if (conn) conn.release(); }
+});
+
 app.get('/api/my-messages/:deviceId/unread', async (req, res) => {
   let conn;
   try { conn = await pool.getConnection(); const r = await conn.query("SELECT COUNT(*) as count FROM messages WHERE device_id=? AND is_read=0", [req.params.deviceId]); res.json({ count: Number(r[0].count) }); }

@@ -298,12 +298,34 @@ async function viewMyMessages() {
     if (!messages.length) { c.innerHTML = '<div style="background:#fff;border:1px solid #e0e0e0;border-radius:12px;padding:1.5rem;text-align:center;color:#aaa;">Sin notificaciones</div>'; return; }
     var html = '<div style="background:#fff;border:1px solid #e0e0e0;border-radius:12px;padding:1rem;"><h3 style="font-size:1rem;margin-bottom:0.75rem;">🔔 Notificaciones</h3>';
     messages.forEach(function(m) { var d = new Date(m.created_at); var u = !m.is_read;
-      html += '<div style="padding:0.75rem;margin-bottom:0.5rem;border-radius:8px;border:1px solid ' + (u?'#22c55e':'#e0e0e0') + ';background:' + (u?'#dcfce7':'#f9f9f9') + ';"><div style="display:flex;justify-content:space-between;"><strong style="font-size:0.9rem;">' + (u?'🟢 ':'') + escapeHtml(m.title) + '</strong><span style="font-size:0.7rem;color:#999;">' + d.toLocaleDateString('es-MX',{day:'numeric',month:'short'}) + '</span></div><p style="font-size:0.85rem;color:#444;margin-top:0.25rem;">' + escapeHtml(m.body) + '</p></div>';
+      html += '<div style="padding:0.75rem;margin-bottom:0.5rem;border-radius:8px;border:1px solid ' + (u?'#22c55e':'#e0e0e0') + ';background:' + (u?'#dcfce7':'#f9f9f9') + ';">';
+      html += '<div style="display:flex;justify-content:space-between;"><strong style="font-size:0.9rem;">' + (u?'🟢 ':'') + escapeHtml(m.title) + '</strong><span style="font-size:0.7rem;color:#999;">' + d.toLocaleDateString('es-MX',{day:'numeric',month:'short'}) + '</span></div>';
+      html += '<p style="font-size:0.85rem;color:#444;margin-top:0.25rem;">' + escapeHtml(m.body) + '</p>';
+      if (m.reply) {
+        html += '<div style="margin-top:0.5rem;padding:0.5rem;background:#e0f2fe;border-radius:6px;font-size:0.8rem;"><strong>Tu respuesta:</strong> ' + escapeHtml(m.reply) + '</div>';
+      } else {
+        html += '<div style="margin-top:0.5rem;display:flex;gap:0.3rem;" id="reply-box-' + m.id + '"><input type="text" placeholder="Responder..." style="flex:1;padding:0.4rem 0.6rem;border:1px solid #e0e0e0;border-radius:6px;font-size:0.8rem;" id="reply-' + m.id + '"><button onclick="replyMessage(' + m.id + ')" style="padding:0.4rem 0.8rem;background:#22c55e;color:#fff;border:none;border-radius:6px;font-size:0.8rem;cursor:pointer;">Enviar</button></div>';
+      }
+      html += '</div>';
     });
     html += '</div>'; c.innerHTML = html;
     messages.filter(function(m){return !m.is_read;}).forEach(function(m){ fetch(API_BASE+'/api/my-messages/'+m.id+'/read',{method:'PUT'}); });
     setTimeout(function(){ var b=document.getElementById('unread-badge'); if(b) b.style.display='none'; }, 1000);
   } catch(e) { c.innerHTML = '<p style="color:#ef4444;text-align:center;">Error</p>'; }
+}
+
+async function replyMessage(messageId) {
+  var input = document.getElementById('reply-' + messageId);
+  var reply = input ? input.value.trim() : '';
+  if (!reply) return;
+  try {
+    await fetch(API_BASE + '/api/my-messages/' + messageId + '/reply', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reply: reply }),
+    });
+    var box = document.getElementById('reply-box-' + messageId);
+    if (box) box.innerHTML = '<div style="padding:0.5rem;background:#e0f2fe;border-radius:6px;font-size:0.8rem;"><strong>Tu respuesta:</strong> ' + escapeHtml(reply) + '</div>';
+  } catch(e) {}
 }
 
 // ============ MI VIAJE ============

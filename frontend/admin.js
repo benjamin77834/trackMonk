@@ -262,8 +262,24 @@ async function viewHistory(deviceId) {
 
 async function sendMessage(deviceId) {
   var d = allDevices.find(function(x) { return x.id === deviceId; }) || {};
+  // Cargar mensajes previos para ver respuestas
+  var res = await af(API_BASE + '/api/my-messages/' + deviceId);
+  var messages = await res.json();
+  var historyHtml = '';
+  if (messages && messages.length) {
+    historyHtml = '<div style="max-height:200px;overflow-y:auto;margin-bottom:1rem;border:1px solid #eee;border-radius:8px;padding:0.5rem;">';
+    messages.slice(0, 10).forEach(function(m) {
+      historyHtml += '<div style="margin-bottom:0.5rem;padding:0.5rem;background:#f9f9f9;border-radius:6px;font-size:0.8rem;">';
+      historyHtml += '<div style="color:#666;">' + new Date(m.created_at).toLocaleString('es-MX') + '</div>';
+      historyHtml += '<div><strong>Tú:</strong> ' + esc(m.body) + '</div>';
+      if (m.reply) historyHtml += '<div style="margin-top:0.25rem;color:#22c55e;"><strong>Respuesta:</strong> ' + esc(m.reply) + '</div>';
+      historyHtml += '</div>';
+    });
+    historyHtml += '</div>';
+  }
   showDetail(
-    '<h3>💬 Mensaje a ' + esc(d.person_name || d.device_name) + '</h3>' +
+    '<h3>💬 Chat con ' + esc(d.person_name || d.device_name) + '</h3>' +
+    historyHtml +
     '<div class="form-group"><label>Título</label><input id="msg-title" value="TrackMonk"></div>' +
     '<div class="form-group"><label>Mensaje</label><input id="msg-body" placeholder="Escribe..."></div>' +
     '<button onclick="doSendMessage(' + deviceId + ')" class="btn btn-accent2" style="width:100%;margin-top:0.5rem;">Enviar</button>'
