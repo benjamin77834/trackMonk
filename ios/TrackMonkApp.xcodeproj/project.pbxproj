@@ -24,7 +24,7 @@
 		2B35CD3C5704221E2E5A2F11 /* APIManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIManager.swift; sourceTree = "<group>"; };
 		30DE71F509027A67443F642C /* TrackMonkWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TrackMonkWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		36A6702D8E17CC8331003BD6 /* TrackMonkWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrackMonkWatchApp.swift; sourceTree = "<group>"; };
-		4CC0031F0F2C19582A9E33A0 /* TrackMonkApp.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TrackMonkApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4CC0031F0F2C19582A9E33A0 /* TrackMonkApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TrackMonkApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		56C49DD1D20361B75443F207 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
 		5BBE9F89AEBF492F23DEC39C /* WatchLocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchLocationManager.swift; sourceTree = "<group>"; };
 		9D8C5E371F83CF7CE3E9080B /* WatchAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchAPI.swift; sourceTree = "<group>"; };
@@ -122,14 +122,6 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
-				TargetAttributes = {
-					3BBEBAE0B043A3CCE4A01AA2 = {
-						DevelopmentTeam = "";
-					};
-					4BC2F42C3FDB8B91AF43BD14 = {
-						DevelopmentTeam = "";
-					};
-				};
 			};
 			buildConfigurationList = 452891F717464412A1832D13 /* Build configuration list for PBXProject "TrackMonkApp" */;
 			developmentRegion = en;
@@ -194,7 +186,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = MW8RXK66UP;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.monkeyphone.trackmonk;
 				MARKETING_VERSION = 1.0.0;
@@ -331,7 +323,7 @@
 				CODE_SIGN_ENTITLEMENTS = TrackMonkApp.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = MW8RXK66UP;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = sources/Info.plist;
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "TrackMonk necesita tu ubicación en segundo plano para tracking continuo.";
@@ -356,7 +348,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = MW8RXK66UP;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.monkeyphone.trackmonk;
 				MARKETING_VERSION = 1.0.0;
@@ -374,7 +366,7 @@
 				CODE_SIGN_ENTITLEMENTS = TrackMonkApp.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = MW8RXK66UP;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = sources/Info.plist;
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "TrackMonk necesita tu ubicación en segundo plano para tracking continuo.";

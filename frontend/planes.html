@@ -3,83 +3,139 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TrackMonk - Planes y Precios</title>
+  <title>TrackMonk - Tracking GPS para Flotas | Planes y Precios</title>
+  <meta name="description" content="Trackea tu flota en tiempo real. GPS, alertas de emergencia, control de gastos. Desde $1,099/mes.">
   <meta name="theme-color" content="#22c55e">
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:#fff; color:#1a1a1a; }
-
-    .hero { background:#111; color:#fff; padding:4rem 1.5rem; text-align:center; }
-    .hero h1 { font-size:2.5rem; margin-bottom:0.5rem; }
-    .hero p { color:#999; font-size:1.1rem; max-width:600px; margin:0 auto 2rem; }
-    .hero .badge { display:inline-block; background:#22c55e; color:#000; padding:0.3rem 1rem; border-radius:20px; font-weight:700; font-size:0.85rem; margin-bottom:1rem; }
-
-    .container { max-width:1000px; margin:0 auto; padding:2rem 1.5rem; }
-
-    .features { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:1.5rem; margin:2rem 0; }
-    .feature { text-align:center; padding:1.5rem; }
-    .feature .icon { font-size:2rem; margin-bottom:0.5rem; }
-    .feature h3 { font-size:1rem; margin-bottom:0.25rem; }
-    .feature p { font-size:0.85rem; color:#666; }
-
-    .plans { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:1.5rem; margin:2rem 0; }
-    .plan { border:2px solid #e0e0e0; border-radius:16px; padding:2rem 1.5rem; text-align:center; transition:all 0.2s; position:relative; }
-    .plan:hover { border-color:#22c55e; box-shadow:0 8px 24px rgba(34,197,94,0.15); }
-    .plan.popular { border-color:#22c55e; }
-    .plan.popular::before { content:'⭐ Popular'; position:absolute; top:-12px; left:50%; transform:translateX(-50%); background:#22c55e; color:#fff; padding:0.2rem 1rem; border-radius:20px; font-size:0.75rem; font-weight:700; }
-    .plan h3 { font-size:1.2rem; margin-bottom:0.5rem; }
-    .plan .price { font-size:2.5rem; font-weight:800; color:#111; }
-    .plan .price span { font-size:1rem; font-weight:400; color:#666; }
-    .plan .devices { color:#22c55e; font-weight:600; margin:0.5rem 0; }
-    .plan ul { list-style:none; text-align:left; margin:1rem 0; }
-    .plan ul li { padding:0.3rem 0; font-size:0.9rem; color:#444; }
-    .plan ul li::before { content:'✓ '; color:#22c55e; font-weight:700; }
-    .plan .btn { display:block; width:100%; padding:0.8rem; background:#22c55e; color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:700; cursor:pointer; text-decoration:none; }
-    .plan .btn:hover { background:#16a34a; }
-    .plan.demo .btn { background:#3b82f6; }
-
-    .demo-section { background:#f5f5f5; padding:3rem 1.5rem; text-align:center; margin-top:2rem; border-radius:16px; }
-    .demo-section h2 { margin-bottom:0.5rem; }
-    .demo-section p { color:#666; margin-bottom:1.5rem; }
-    .demo-form { max-width:400px; margin:0 auto; }
-    .demo-form input { width:100%; padding:0.7rem 1rem; border:1px solid #ddd; border-radius:8px; margin-bottom:0.75rem; font-size:0.95rem; }
-    .demo-form input:focus { border-color:#22c55e; outline:none; box-shadow:0 0 0 3px rgba(34,197,94,0.1); }
-    .demo-form button { width:100%; padding:0.8rem; background:#22c55e; color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:700; cursor:pointer; }
-    .demo-form button:hover { background:#16a34a; }
-
-    #demo-result { display:none; background:#fff; border:2px solid #22c55e; border-radius:12px; padding:1.5rem; margin-top:1rem; text-align:left; }
-    #demo-result h3 { color:#22c55e; margin-bottom:0.75rem; }
-    #demo-result .cred { background:#f5f5f5; padding:0.5rem 0.75rem; border-radius:6px; margin:0.3rem 0; font-family:monospace; font-size:0.9rem; }
-
-    .footer { background:#111; color:#999; padding:2rem; text-align:center; margin-top:3rem; font-size:0.85rem; }
-    .footer a { color:#22c55e; text-decoration:none; }
-
-    @media(max-width:600px) { .hero h1 { font-size:1.8rem; } .plan .price { font-size:2rem; } }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#fff;color:#1a1a1a;line-height:1.6}
+    .hero{background:#111;color:#fff;padding:3rem 1.5rem 4rem;text-align:center}
+    .hero img{max-width:100%;max-height:180px;border-radius:12px;margin-bottom:1.5rem}
+    .hero h1{font-size:2.2rem;margin-bottom:0.5rem}
+    .hero p{color:#aaa;font-size:1.05rem;max-width:650px;margin:0 auto 1.5rem}
+    .hero .cta{display:inline-block;padding:0.9rem 2.5rem;background:#22c55e;color:#fff;border-radius:10px;font-weight:700;text-decoration:none;font-size:1.1rem;transition:background 0.2s}
+    .hero .cta:hover{background:#16a34a}
+    .hero .sub-cta{display:block;margin-top:0.75rem;color:#888;font-size:0.85rem}
+    .container{max-width:1100px;margin:0 auto;padding:3rem 1.5rem}
+    .section-title{text-align:center;font-size:1.8rem;margin-bottom:0.5rem}
+    .section-sub{text-align:center;color:#666;margin-bottom:2.5rem;font-size:1rem}
+    .stats{display:flex;justify-content:center;gap:3rem;flex-wrap:wrap;margin:2rem 0 3rem;padding:2rem;background:#f8fdf8;border-radius:16px}
+    .stat{text-align:center}
+    .stat .num{font-size:2.5rem;font-weight:800;color:#22c55e}
+    .stat .label{font-size:0.85rem;color:#666}
+    .how{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:2rem;margin:2rem 0}
+    .how-step{text-align:center;padding:1.5rem}
+    .how-step .icon{font-size:2.5rem;margin-bottom:0.75rem}
+    .how-step h3{font-size:1rem;margin-bottom:0.25rem}
+    .how-step p{font-size:0.85rem;color:#666}
+    .features{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1.5rem;margin:2rem 0}
+    .feature{padding:1.5rem;border:1px solid #eee;border-radius:12px;transition:box-shadow 0.2s}
+    .feature:hover{box-shadow:0 4px 16px rgba(0,0,0,0.06)}
+    .feature .icon{font-size:1.8rem;margin-bottom:0.5rem}
+    .feature h3{font-size:1rem;margin-bottom:0.25rem}
+    .feature p{font-size:0.85rem;color:#666}
+    .plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.5rem;margin:2rem 0}
+    .plan{border:2px solid #e0e0e0;border-radius:16px;padding:2rem 1.5rem;text-align:center;transition:all 0.2s;position:relative}
+    .plan:hover{border-color:#22c55e;box-shadow:0 8px 24px rgba(34,197,94,0.12)}
+    .plan.popular{border-color:#22c55e;transform:scale(1.02)}
+    .plan.popular::before{content:'⭐ Más popular';position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:#22c55e;color:#fff;padding:0.25rem 1rem;border-radius:20px;font-size:0.75rem;font-weight:700}
+    .plan h3{font-size:1.2rem;margin-bottom:0.5rem}
+    .plan .price{font-size:2.5rem;font-weight:800;color:#111}
+    .plan .price span{font-size:1rem;font-weight:400;color:#666}
+    .plan .devices{color:#22c55e;font-weight:600;margin:0.5rem 0}
+    .plan ul{list-style:none;text-align:left;margin:1rem 0}
+    .plan ul li{padding:0.35rem 0;font-size:0.9rem;color:#444}
+    .plan ul li::before{content:'✓ ';color:#22c55e;font-weight:700}
+    .plan .btn{display:block;width:100%;padding:0.85rem;background:#22c55e;color:#fff;border:none;border-radius:10px;font-size:1rem;font-weight:700;cursor:pointer;text-decoration:none;transition:background 0.2s}
+    .plan .btn:hover{background:#16a34a}
+    .plan.demo .btn{background:#3b82f6}
+    .plan.demo .btn:hover{background:#2563eb}
+    .compare{overflow-x:auto;margin:2rem 0}
+    .compare table{width:100%;border-collapse:collapse;font-size:0.85rem;min-width:600px}
+    .compare th{padding:0.75rem;text-align:center;border-bottom:2px solid #eee;color:#666;font-weight:600}
+    .compare td{padding:0.6rem;text-align:center;border-bottom:1px solid #f0f0f0}
+    .compare td:first-child{text-align:left;font-weight:500}
+    .compare .check{color:#22c55e;font-weight:700}
+    .compare .no{color:#ddd}
+    .testimonials{background:#f9f9f9;padding:3rem 1.5rem;margin:3rem -1.5rem}
+    .testimonials .container{max-width:900px;margin:0 auto}
+    .testimonial{background:#fff;border-radius:12px;padding:1.5rem;margin-bottom:1rem;box-shadow:0 1px 4px rgba(0,0,0,0.05)}
+    .testimonial p{font-style:italic;color:#444;margin-bottom:0.5rem}
+    .testimonial .author{font-size:0.85rem;color:#888;font-weight:600}
+    .faq{margin:2rem 0}
+    .faq-item{border-bottom:1px solid #eee;padding:1rem 0}
+    .faq-item summary{font-weight:600;cursor:pointer;font-size:0.95rem}
+    .faq-item p{margin-top:0.5rem;color:#666;font-size:0.9rem}
+    .demo-section{background:#f0fdf4;padding:3rem 1.5rem;border-radius:16px;text-align:center;margin:3rem 0}
+    .demo-section h2{margin-bottom:0.5rem}
+    .demo-section p{color:#666;margin-bottom:1.5rem}
+    .demo-form{max-width:400px;margin:0 auto}
+    .demo-form input{width:100%;padding:0.7rem 1rem;border:1px solid #ddd;border-radius:8px;margin-bottom:0.75rem;font-size:0.95rem}
+    .demo-form input:focus{border-color:#22c55e;outline:none;box-shadow:0 0 0 3px rgba(34,197,94,0.1)}
+    .demo-form button{width:100%;padding:0.85rem;background:#22c55e;color:#fff;border:none;border-radius:10px;font-size:1rem;font-weight:700;cursor:pointer}
+    .demo-form button:hover{background:#16a34a}
+    #demo-result{display:none;background:#fff;border:2px solid #22c55e;border-radius:12px;padding:1.5rem;margin-top:1rem;text-align:left}
+    #demo-result h3{color:#22c55e;margin-bottom:0.75rem}
+    #demo-result .cred{background:#f5f5f5;padding:0.5rem 0.75rem;border-radius:6px;margin:0.3rem 0;font-family:monospace;font-size:0.9rem}
+    .footer{background:#111;color:#999;padding:2.5rem;text-align:center;font-size:0.85rem}
+    .footer a{color:#22c55e;text-decoration:none}
+    .footer .links{margin-top:0.75rem;display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap}
+    @media(max-width:600px){.hero h1{font-size:1.6rem}.plan .price{font-size:2rem}.stats{gap:1.5rem}}
   </style>
 </head>
 <body>
 
+  <!-- Hero -->
   <div class="hero">
-    <img src="/gorila-banner.png" alt="TrackMonk" style="max-width:100%;max-height:200px;margin-bottom:1rem;border-radius:12px;">
-    <span class="badge">🐵 TrackMonk</span>
+    <img src="/gorila-banner.png" alt="TrackMonk - Tracking GPS">
     <h1>Trackea tu flota en tiempo real</h1>
-    <p>Ubicación GPS, alertas de emergencia, control de gastos y viajes. Todo desde el navegador, sin instalar apps pesadas.</p>
-    <a href="#demo" style="display:inline-block;padding:0.8rem 2rem;background:#22c55e;color:#fff;border-radius:10px;font-weight:700;text-decoration:none;font-size:1.1rem;">Prueba gratis 7 días</a>
+    <p>Ubicación GPS en vivo, alertas de emergencia por SMS, control de gastos de viaje y comunicación directa con tus conductores. Todo desde el navegador o app nativa.</p>
+    <a href="#demo" class="cta">Prueba gratis 7 días</a>
+    <span class="sub-cta">Sin tarjeta de crédito · Activo en 2 minutos</span>
   </div>
 
+  <!-- Stats -->
   <div class="container">
-    <div class="features">
-      <div class="feature"><div class="icon">📍</div><h3>Tracking GPS</h3><p>Ubicación en tiempo real de todos tus vehículos</p></div>
-      <div class="feature"><div class="icon">🚨</div><h3>Alertas</h3><p>Botón de emergencia: accidente, robo, avería</p></div>
-      <div class="feature"><div class="icon">🚛</div><h3>Viajes</h3><p>Control de rutas, carga y costos por viaje</p></div>
-      <div class="feature"><div class="icon">💬</div><h3>Mensajes</h3><p>Comunicación directa con conductores por push</p></div>
-      <div class="feature"><div class="icon">🗺️</div><h3>Mapa</h3><p>Visualiza toda tu flota en un mapa interactivo</p></div>
-      <div class="feature"><div class="icon">🏢</div><h3>Multi-empresa</h3><p>Cada empresa con sus propios usuarios y datos</p></div>
+    <div class="stats">
+      <div class="stat"><div class="num">GPS</div><div class="label">Tracking en tiempo real</div></div>
+      <div class="stat"><div class="num">5 min</div><div class="label">Actualización automática</div></div>
+      <div class="stat"><div class="num">SMS</div><div class="label">Alertas instantáneas</div></div>
+      <div class="stat"><div class="num">24/7</div><div class="label">Monitoreo continuo</div></div>
     </div>
+  </div>
 
-    <h2 style="text-align:center;margin:2rem 0 0.5rem;">Planes</h2>
-    <p style="text-align:center;color:#666;margin-bottom:1.5rem;">Sin contratos. Cancela cuando quieras.</p>
+  <!-- Cómo funciona -->
+  <div class="container">
+    <h2 class="section-title">¿Cómo funciona?</h2>
+    <p class="section-sub">En 3 pasos tu flota está trackeada</p>
+    <div class="how">
+      <div class="how-step"><div class="icon">📱</div><h3>1. Registra conductores</h3><p>Crea usuarios para cada conductor. Ellos abren el link en su celular y listo.</p></div>
+      <div class="how-step"><div class="icon">📍</div><h3>2. Tracking automático</h3><p>La app envía ubicación GPS cada 5 minutos. Sin que el conductor haga nada.</p></div>
+      <div class="how-step"><div class="icon">🗺️</div><h3>3. Monitorea en vivo</h3><p>Ve todos tus vehículos en un mapa. Historial, rutas, gastos y alertas.</p></div>
+    </div>
+  </div>
 
+  <!-- Features -->
+  <div class="container">
+    <h2 class="section-title">Todo lo que necesitas</h2>
+    <p class="section-sub">Una plataforma completa para gestionar tu flota</p>
+    <div class="features">
+      <div class="feature"><div class="icon">📍</div><h3>Tracking GPS en vivo</h3><p>Ubicación de todos tus vehículos actualizada cada 5 minutos en un mapa interactivo.</p></div>
+      <div class="feature"><div class="icon">🚨</div><h3>Alertas de emergencia</h3><p>Botón de pánico: accidente, robo, avería. Te llega SMS al instante con ubicación.</p></div>
+      <div class="feature"><div class="icon">🚛</div><h3>Control de viajes</h3><p>Crea viajes con origen, destino y carga. Ve el recorrido completo en mapa.</p></div>
+      <div class="feature"><div class="icon">💰</div><h3>Gastos por viaje</h3><p>El conductor registra gasolina, casetas, comida. Tú ves el total en tiempo real.</p></div>
+      <div class="feature"><div class="icon">💬</div><h3>Mensajería directa</h3><p>Envía mensajes a conductores con notificación. Ellos responden desde la app.</p></div>
+      <div class="feature"><div class="icon">📊</div><h3>Dashboard ejecutivo</h3><p>Métricas clave: dispositivos activos, viajes del mes, gastos totales, alertas.</p></div>
+      <div class="feature"><div class="icon">🏢</div><h3>Multi-empresa</h3><p>Cada empresa con sus propios conductores, vehículos y datos separados.</p></div>
+      <div class="feature"><div class="icon">📥</div><h3>Exportar a Excel</h3><p>Descarga reportes de viajes, gastos y alertas en CSV compatible con Excel.</p></div>
+      <div class="feature"><div class="icon">⌚</div><h3>iPhone, iPad y Apple Watch</h3><p>App nativa con tracking en segundo plano y botón de emergencia en el reloj.</p></div>
+    </div>
+  </div>
+
+  <!-- Planes -->
+  <div class="container">
+    <h2 class="section-title">Planes</h2>
+    <p class="section-sub">Sin contratos · Cancela cuando quieras · Soporte incluido</p>
     <div class="plans">
       <div class="plan demo">
         <h3>Demo</h3>
@@ -90,10 +146,10 @@
           <li>Tracking GPS</li>
           <li>Alertas de emergencia</li>
           <li>1 viaje activo</li>
+          <li>Dashboard básico</li>
         </ul>
         <a href="#demo" class="btn">Probar gratis</a>
       </div>
-
       <div class="plan">
         <h3>Básico</h3>
         <div class="price">$1,099 <span>/mes</span></div>
@@ -102,44 +158,105 @@
           <li>Todo del Demo</li>
           <li>Viajes ilimitados</li>
           <li>Control de gastos</li>
-          <li>Historial 30 días</li>
-          <li>Mensajes push</li>
           <li>600 SMS de alertas incluidos</li>
+          <li>Historial 30 días</li>
+          <li>Mensajería con conductores</li>
+          <li>Exportar a Excel</li>
         </ul>
-        <a href="https://wa.me/525635103278?text=Quiero%20el%20plan%20Básico%20de%20TrackMonk" class="btn">Contratar</a>
+        <a href="https://wa.me/525635013278?text=Quiero%20el%20plan%20Básico%20de%20TrackMonk" class="btn">Contratar</a>
       </div>
-
       <div class="plan popular">
         <h3>Pro</h3>
         <div class="price">$1,599 <span>/mes</span></div>
         <div class="devices">Hasta 20 dispositivos</div>
         <ul>
           <li>Todo del Básico</li>
-          <li>Historial 90 días</li>
-          <li>Reportes de viajes</li>
-          <li>Múltiples admins</li>
           <li>600 SMS de alertas incluidos</li>
+          <li>Historial 90 días</li>
+          <li>Múltiples administradores</li>
+          <li>Auto-tracking configurable</li>
+          <li>App iOS nativa</li>
           <li>Soporte prioritario</li>
         </ul>
-        <a href="https://wa.me/525635103278?text=Quiero%20el%20plan%20Pro%20de%20TrackMonk" class="btn">Contratar</a>
+        <a href="https://wa.me/525635013278?text=Quiero%20el%20plan%20Pro%20de%20TrackMonk" class="btn">Contratar</a>
       </div>
-
       <div class="plan">
         <h3>Enterprise</h3>
         <div class="price">$2,799 <span>/mes</span></div>
         <div class="devices">Dispositivos ilimitados</div>
         <ul>
           <li>Todo del Pro</li>
-          <li>Historial ilimitado</li>
-          <li>API personalizada</li>
           <li>600 SMS de alertas incluidos</li>
-          <li>Soporte dedicado</li>
-          <li>Marca blanca</li>
+          <li>Historial ilimitado</li>
+          <li>Apple Watch incluido</li>
+          <li>API personalizada</li>
+          <li>Soporte dedicado 24/7</li>
+          <li>Marca blanca disponible</li>
         </ul>
-        <a href="https://wa.me/525635103278?text=Quiero%20el%20plan%20Enterprise%20de%20TrackMonk" class="btn">Contratar</a>
+        <a href="https://wa.me/525635013278?text=Quiero%20el%20plan%20Enterprise%20de%20TrackMonk" class="btn">Contratar</a>
       </div>
     </div>
+  </div>
 
+  <!-- Comparativa -->
+  <div class="container">
+    <h2 class="section-title">Comparativa de planes</h2>
+    <div class="compare">
+      <table>
+        <tr><th></th><th>Demo</th><th>Básico</th><th>Pro</th><th>Enterprise</th></tr>
+        <tr><td>Dispositivos</td><td>2</td><td>5</td><td>20</td><td>Ilimitados</td></tr>
+        <tr><td>Tracking GPS</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td></tr>
+        <tr><td>Alertas emergencia</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td></tr>
+        <tr><td>SMS de alertas</td><td class="no">—</td><td>600/mes</td><td>600/mes</td><td>600/mes</td></tr>
+        <tr><td>Viajes y gastos</td><td>1 activo</td><td class="check">Ilimitados</td><td class="check">Ilimitados</td><td class="check">Ilimitados</td></tr>
+        <tr><td>Mensajería</td><td class="no">—</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td></tr>
+        <tr><td>Exportar Excel</td><td class="no">—</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td></tr>
+        <tr><td>Historial</td><td>7 días</td><td>30 días</td><td>90 días</td><td>Ilimitado</td></tr>
+        <tr><td>Multi-admin</td><td class="no">—</td><td class="no">—</td><td class="check">✓</td><td class="check">✓</td></tr>
+        <tr><td>App iOS nativa</td><td class="no">—</td><td class="no">—</td><td class="check">✓</td><td class="check">✓</td></tr>
+        <tr><td>Apple Watch</td><td class="no">—</td><td class="no">—</td><td class="no">—</td><td class="check">✓</td></tr>
+        <tr><td>Soporte</td><td>Email</td><td>WhatsApp</td><td>Prioritario</td><td>Dedicado 24/7</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- Testimonios -->
+  <div class="testimonials">
+    <div class="container">
+      <h2 class="section-title">Lo que dicen nuestros clientes</h2>
+      <p class="section-sub">Empresas que ya confían en TrackMonk</p>
+      <div class="testimonial">
+        <p>"Antes no sabíamos dónde estaban nuestros camiones. Con TrackMonk vemos todo en tiempo real y los gastos de cada viaje. Nos ahorramos un 20% en casetas innecesarias."</p>
+        <div class="author">— Transportes del Pacífico, Guadalajara</div>
+      </div>
+      <div class="testimonial">
+        <p>"El botón de emergencia nos salvó cuando un conductor tuvo un accidente en carretera. Nos llegó el SMS con la ubicación exacta y pudimos enviar ayuda en minutos."</p>
+        <div class="author">— Logística Express, CDMX</div>
+      </div>
+      <div class="testimonial">
+        <p>"Lo mejor es que no necesitas instalar nada complicado. El conductor abre un link en su celular y listo. En 5 minutos ya estaba trackeando."</p>
+        <div class="author">— Distribuidora Norte, Monterrey</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAQ -->
+  <div class="container">
+    <h2 class="section-title">Preguntas frecuentes</h2>
+    <div class="faq">
+      <details class="faq-item"><summary>¿Necesito instalar algo en los celulares?</summary><p>No. Los conductores solo abren un link en su navegador (Firefox recomendado en Android). También hay app nativa para iPhone en planes Pro y Enterprise.</p></details>
+      <details class="faq-item"><summary>¿Funciona sin internet?</summary><p>Necesita conexión a internet para enviar la ubicación. Funciona con datos móviles (3G/4G/5G) o WiFi.</p></details>
+      <details class="faq-item"><summary>¿Cada cuánto se actualiza la ubicación?</summary><p>Cada 5 minutos automáticamente. También puedes solicitar la ubicación en cualquier momento con un click.</p></details>
+      <details class="faq-item"><summary>¿Qué pasa si el conductor no tiene señal?</summary><p>La ubicación se envía cuando recupera señal. El sistema siempre muestra la última ubicación conocida.</p></details>
+      <details class="faq-item"><summary>¿Puedo ver el historial de rutas?</summary><p>Sí. Puedes ver el recorrido completo en mapa con fechas y horas. Exportable a Excel.</p></details>
+      <details class="faq-item"><summary>¿Los SMS de alerta tienen costo extra?</summary><p>No. Cada plan incluye 600 SMS mensuales para alertas de emergencia sin costo adicional.</p></details>
+      <details class="faq-item"><summary>¿Puedo cancelar en cualquier momento?</summary><p>Sí. Sin contratos ni penalizaciones. Cancelas y dejas de pagar el siguiente mes.</p></details>
+      <details class="faq-item"><summary>¿Funciona en todo México?</summary><p>Sí. Funciona en cualquier lugar con cobertura celular. Hemos trackeado rutas de Tijuana a Cancún.</p></details>
+    </div>
+  </div>
+
+  <!-- Demo -->
+  <div class="container">
     <div class="demo-section" id="demo">
       <h2>🎯 Prueba gratis por 7 días</h2>
       <p>Sin tarjeta de crédito. Registra tu empresa y empieza a trackear en 2 minutos.</p>
@@ -148,7 +265,7 @@
         <input type="text" id="demo-name" placeholder="Tu nombre">
         <input type="email" id="demo-email" placeholder="Email">
         <input type="tel" id="demo-phone" placeholder="Teléfono (opcional)">
-        <button onclick="registerDemo()">Crear cuenta demo</button>
+        <button onclick="registerDemo()">Crear cuenta demo gratis</button>
       </div>
       <div id="demo-result">
         <h3>✅ ¡Cuenta creada!</h3>
@@ -164,9 +281,16 @@
     </div>
   </div>
 
+  <!-- Footer -->
   <div class="footer">
     <p>🐵 TrackMonk by <a href="https://monkeyphone.net">Monkey Phone</a> · © 2026</p>
-    <p style="margin-top:0.5rem;">¿Dudas? <a href="https://wa.me/525635103278">WhatsApp</a></p>
+    <div class="links">
+      <a href="/">App conductor</a>
+      <a href="/admin.html">Panel admin</a>
+      <a href="https://wa.me/525635013278">WhatsApp ventas</a>
+      <a href="https://monkeyphone.net">MonkeyPhone</a>
+    </div>
+    <p style="margin-top:1rem;font-size:0.75rem;color:#666;">Tracking GPS · Alertas SMS · Control de gastos · Multi-empresa · iPhone · iPad · Apple Watch</p>
   </div>
 
   <script src="/config.js"></script>
