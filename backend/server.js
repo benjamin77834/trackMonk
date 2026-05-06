@@ -665,6 +665,36 @@ app.get('/api/my-messages/:deviceId', async (req, res) => {
   finally { if (conn) conn.release(); }
 });
 
+// Todos los mensajes con respuestas (admin)
+app.get('/api/messages/all', auth, async (req, res) => {
+  const cf = companyFilter(req);
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    let sql = "SELECT m.*, d.person_name, d.device_name, d.phone FROM messages m JOIN devices d ON d.id=m.device_id WHERE 1=1";
+    const params = [];
+    if (cf.sql) { sql += cf.sql.replace('company_id', 'd.company_id'); params.push(...cf.params); }
+    sql += ' ORDER BY m.created_at DESC LIMIT 100';
+    res.json(await conn.query(sql, params));
+  } catch (err) { res.status(500).json({ error: 'Error interno' }); }
+  finally { if (conn) conn.release(); }
+});
+
+// Mensajes con respuestas pendientes (admin)
+app.get('/api/messages/with-replies', auth, async (req, res) => {
+  const cf = companyFilter(req);
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    let sql = "SELECT m.*, d.person_name, d.device_name, d.phone FROM messages m JOIN devices d ON d.id=m.device_id WHERE m.reply IS NOT NULL";
+    const params = [];
+    if (cf.sql) { sql += cf.sql.replace('company_id', 'd.company_id'); params.push(...cf.params); }
+    sql += ' ORDER BY m.replied_at DESC LIMIT 50';
+    res.json(await conn.query(sql, params));
+  } catch (err) { res.status(500).json({ error: 'Error interno' }); }
+  finally { if (conn) conn.release(); }
+});
+
 app.put('/api/my-messages/:id/read', async (req, res) => {
   let conn;
   try { conn = await pool.getConnection(); await conn.query('UPDATE messages SET is_read=1 WHERE id=?', [req.params.id]); res.json({ success: true }); }

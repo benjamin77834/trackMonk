@@ -49,6 +49,9 @@
         <button class="nav-item" onclick="navigate('search')">
           <span class="nav-icon">🔍</span><span class="nav-label">Buscar</span>
         </button>
+        <button class="nav-item" onclick="navigate('messages')">
+          <span class="nav-icon">💬</span><span class="nav-label">Mensajes</span>
+        </button>
         <button class="nav-item nav-super" style="display:none;" onclick="navigate('companies')">
           <span class="nav-icon">🏢</span><span class="nav-label">Empresas</span>
         </button>
@@ -155,6 +158,18 @@
           <input type="text" id="search-input" placeholder="Buscar por nombre, teléfono, empresa o vehículo..." oninput="searchDevices()">
         </div>
         <div id="search-results"></div>
+      </section>
+
+      <!-- Page: Mensajes -->
+      <section id="page-messages" class="page">
+        <div class="toolbar">
+          <select id="msg-filter" onchange="loadAllMessages()" class="select-filter">
+            <option value="all">Todos</option>
+            <option value="replies">Con respuesta</option>
+          </select>
+          <button onclick="loadAllMessages()" class="btn btn-secondary">🔄</button>
+        </div>
+        <div id="messages-list"></div>
       </section>
 
       <!-- Page: Empresas (super admin) -->

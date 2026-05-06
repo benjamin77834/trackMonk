@@ -109,7 +109,7 @@ function navigate(page) {
   if (event && event.currentTarget) event.currentTarget.classList.add('active');
   var pageEl = document.getElementById('page-' + page);
   if (pageEl) pageEl.classList.add('active');
-  var titles = { dashboard:'Dashboard', devices:'Dispositivos', map:'Mapa', trips:'Viajes', alerts:'Alertas', search:'Buscar', companies:'Empresas', users:'Usuarios', settings:'Configuración' };
+  var titles = { dashboard:'Dashboard', devices:'Dispositivos', map:'Mapa', trips:'Viajes', alerts:'Alertas', search:'Buscar', messages:'Mensajes', companies:'Empresas', users:'Usuarios', settings:'Configuración' };
   document.getElementById('page-title').textContent = titles[page] || page;
   closeDetailDirect();
   document.querySelector('.sidebar').classList.remove('open');
@@ -118,6 +118,7 @@ function navigate(page) {
   if (page === 'map') setTimeout(function() { initMap(); loadAllOnMap(); }, 150);
   if (page === 'trips') loadTrips();
   if (page === 'alerts') loadAlerts();
+  if (page === 'messages') loadAllMessages();
   if (page === 'companies') loadCompanies();
   if (page === 'users') loadUsers();
   if (page === 'settings') loadSettings();
@@ -737,6 +738,33 @@ function searchDevices() {
         '</div></div>';
     });
   }, 300);
+}
+
+// ============ MESSAGES ============
+
+async function loadAllMessages() {
+  var filter = document.getElementById('msg-filter').value;
+  var url = filter === 'replies' ? API_BASE + '/api/messages/with-replies' : API_BASE + '/api/messages/all';
+  var res = await af(url);
+  var messages = await res.json();
+  var list = document.getElementById('messages-list');
+  list.innerHTML = '';
+  if (!messages.length) { list.innerHTML = '<div class="empty">No hay mensajes</div>'; return; }
+  messages.forEach(function(m) {
+    var dt = new Date(m.created_at);
+    var hasReply = m.reply && m.reply.length > 0;
+    list.innerHTML += '<div class="card" style="margin-bottom:0.75rem;' + (hasReply ? 'border-left:3px solid #22c55e;' : '') + '">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;">' +
+        '<div><div class="card-title">👤 ' + esc(m.person_name || m.device_name) + '</div>' +
+        (m.phone ? '<div class="card-meta">📞 ' + esc(m.phone) + '</div>' : '') + '</div>' +
+        '<span style="font-size:0.75rem;color:#999;">' + dt.toLocaleDateString('es-MX', {day:'numeric',month:'short'}) + ' ' + dt.toLocaleTimeString('es-MX', {hour:'2-digit',minute:'2-digit'}) + '</span>' +
+      '</div>' +
+      '<div style="margin-top:0.5rem;padding:0.5rem;background:#f5f5f5;border-radius:6px;font-size:0.85rem;">' +
+        '<strong>' + esc(m.title) + ':</strong> ' + esc(m.body) +
+      '</div>' +
+      (hasReply ? '<div style="margin-top:0.5rem;padding:0.5rem;background:#dcfce7;border-radius:6px;font-size:0.85rem;"><strong>↩️ Respuesta:</strong> ' + esc(m.reply) + '<span style="font-size:0.7rem;color:#888;margin-left:0.5rem;">' + (m.replied_at ? new Date(m.replied_at).toLocaleString('es-MX') : '') + '</span></div>' : '<div style="margin-top:0.25rem;font-size:0.75rem;color:#999;">Sin respuesta</div>') +
+    '</div>';
+  });
 }
 
 // ============ COMPANIES (super admin) ============
