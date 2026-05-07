@@ -340,7 +340,7 @@ async function loadMyTrip() {
     var costsRes = await fetch(API_BASE + '/api/my-trips/' + t.id + '/costs'); var costs = await costsRes.json();
     var total = costs.reduce(function(s,c){return s+parseFloat(c.amount);},0);
     var costsHtml = ''; costs.forEach(function(co){ costsHtml += '<div style="display:flex;justify-content:space-between;padding:0.3rem 0;border-bottom:1px solid #e0e0e0;font-size:0.8rem;"><span>'+escapeHtml(co.concept)+'</span><span>$'+parseFloat(co.amount).toFixed(2)+'</span></div>'; });
-    c.innerHTML = '<div style="background:#fff;border:1px solid #e0e0e0;border-radius:12px;padding:1rem;"><h3 style="font-size:1rem;margin-bottom:0.5rem;">🚛 Viaje activo</h3><div style="display:flex;align-items:center;gap:0.5rem;margin:0.5rem 0;"><span style="width:10px;height:10px;border-radius:50%;background:#22c55e;"></span><span style="font-size:0.85rem;">'+escapeHtml(t.origin)+'</span><span style="flex:1;height:2px;background:#e0e0e0;"></span><span style="font-size:0.85rem;">'+escapeHtml(t.destination)+'</span><span style="width:10px;height:10px;border-radius:50%;background:#ef4444;"></span></div>'+(t.cargo?'<div style="font-size:0.8rem;color:#888;">📦 '+escapeHtml(t.cargo)+'</div>':'')+'<div style="text-align:center;margin:0.75rem 0;padding:0.75rem;background:#f5f5f5;border-radius:8px;"><div style="font-size:0.75rem;color:#888;">Gastos</div><div style="font-size:1.3rem;font-weight:700;">$'+total.toLocaleString('es-MX',{minimumFractionDigits:2})+'</div></div>'+costsHtml+'<div style="margin-top:0.75rem;border-top:1px solid #e0e0e0;padding-top:0.75rem;"><div style="font-size:0.85rem;font-weight:600;margin-bottom:0.5rem;">Agregar gasto</div><div style="display:flex;gap:0.5rem;"><select id="cost-type" style="flex:1;padding:0.5rem;border:1px solid #e0e0e0;border-radius:8px;font-size:0.85rem;"><option value="Gasolina">⛽ Gasolina</option><option value="Caseta">🛣️ Caseta</option><option value="Comida">🍔 Comida</option><option value="Hospedaje">🏨 Hospedaje</option><option value="Mantenimiento">🔧 Mantenimiento</option><option value="Otro">📝 Otro</option></select><input id="cost-amount-user" type="number" step="0.01" placeholder="$0.00" style="width:100px;padding:0.5rem;border:1px solid #e0e0e0;border-radius:8px;font-size:0.85rem;"></div><input id="cost-note-user" type="text" placeholder="Nota (opcional)" style="width:100%;margin-top:0.5rem;padding:0.5rem;border:1px solid #e0e0e0;border-radius:8px;font-size:0.85rem;"><button onclick="addMyTripCost('+t.id+')" style="width:100%;margin-top:0.5rem;padding:0.6rem;background:#22c55e;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Agregar gasto</button><button onclick="completeMyTrip('+t.id+')" style="width:100%;margin-top:0.75rem;padding:0.7rem;background:#ef4444;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">✅ Terminar viaje</button></div></div>';
+    c.innerHTML = '<div style="background:#fff;border:1px solid #e0e0e0;border-radius:12px;padding:1rem;"><h3 style="font-size:1rem;margin-bottom:0.5rem;">🚛 Viaje activo</h3><div style="display:flex;align-items:center;gap:0.5rem;margin:0.5rem 0;"><span style="width:10px;height:10px;border-radius:50%;background:#22c55e;"></span><span style="font-size:0.85rem;">'+escapeHtml(t.origin)+'</span><span style="flex:1;height:2px;background:#e0e0e0;"></span><span style="font-size:0.85rem;">'+escapeHtml(t.destination)+'</span><span style="width:10px;height:10px;border-radius:50%;background:#ef4444;"></span></div>'+(t.cargo?'<div style="font-size:0.8rem;color:#888;">📦 '+escapeHtml(t.cargo)+'</div>':'')+'<div style="text-align:center;margin:0.75rem 0;padding:0.75rem;background:#f5f5f5;border-radius:8px;"><div style="font-size:0.75rem;color:#888;">Gastos</div><div style="font-size:1.3rem;font-weight:700;">$'+total.toLocaleString('es-MX',{minimumFractionDigits:2})+'</div></div>'+costsHtml+'<div style="margin-top:0.75rem;border-top:1px solid #e0e0e0;padding-top:0.75rem;"><div style="font-size:0.85rem;font-weight:600;margin-bottom:0.5rem;">Agregar gasto</div><div style="display:flex;gap:0.5rem;"><select id="cost-type" style="flex:1;padding:0.5rem;border:1px solid #e0e0e0;border-radius:8px;font-size:0.85rem;"><option value="Gasolina">⛽ Gasolina</option><option value="Caseta">🛣️ Caseta</option><option value="Comida">🍔 Comida</option><option value="Hospedaje">🏨 Hospedaje</option><option value="Mantenimiento">🔧 Mantenimiento</option><option value="Otro">📝 Otro</option></select><input id="cost-amount-user" type="number" step="0.01" placeholder="$0.00" style="width:100px;padding:0.5rem;border:1px solid #e0e0e0;border-radius:8px;font-size:0.85rem;"></div><input id="cost-note-user" type="text" placeholder="Nota (opcional)" style="width:100%;margin-top:0.5rem;padding:0.5rem;border:1px solid #e0e0e0;border-radius:8px;font-size:0.85rem;"><button onclick="addMyTripCost('+t.id+')" style="width:100%;margin-top:0.5rem;padding:0.6rem;background:#22c55e;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Agregar gasto</button><button onclick="completeMyTrip('+t.id+')" style="width:100%;margin-top:0.75rem;padding:0.7rem;background:#ef4444;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;" onclick="takePhoto('+t.id+');">📷 Foto</button><button onclick="showSignaturePad('+t.id+')" style="width:100%;margin-top:0.5rem;padding:0.6rem;background:#3b82f6;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">✍️ Firma de entrega</button><button onclick="completeMyTrip('+t.id+')" style="width:100%;margin-top:0.75rem;padding:0.7rem;background:#ef4444;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">✅ Terminar viaje</button></div></div>';
   } catch(e) { c.style.display = 'none'; }
 }
 async function addMyTripCost(tripId) {
@@ -363,6 +363,93 @@ async function completeMyTrip(tripId) {
     updateStatus('Viaje completado ✓', 'success');
     loadMyTrip();
   } catch(e) { updateStatus('Error', 'error'); }
+}
+
+// ============ FOTOS Y FIRMA (opcional) ============
+
+function takePhoto(tripId) {
+  var input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.capture = 'environment';
+  input.onchange = function(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      uploadEvidence(tripId, 'photo', 'Foto de evidencia', ev.target.result);
+    };
+    reader.readAsDataURL(file);
+  };
+  input.click();
+}
+
+function showSignaturePad(tripId) {
+  var panel = document.getElementById('emergency-panel');
+  panel.style.display = 'block';
+  panel.innerHTML = '<div style="background:#fff;border:2px solid #3b82f6;border-radius:12px;padding:1rem;text-align:center;">' +
+    '<h3 style="color:#3b82f6;margin-bottom:0.5rem;">✍️ Firma de entrega</h3>' +
+    '<canvas id="sig-canvas" width="300" height="150" style="border:1px solid #ddd;border-radius:8px;touch-action:none;"></canvas>' +
+    '<div style="margin-top:0.5rem;display:flex;gap:0.5rem;">' +
+      '<button onclick="clearSignature()" style="flex:1;padding:0.5rem;background:#f0f0f0;border:none;border-radius:8px;cursor:pointer;">Borrar</button>' +
+      '<button onclick="saveSignature(\'' + tripId + '\')" style="flex:1;padding:0.5rem;background:#22c55e;color:#fff;border:none;border-radius:8px;cursor:pointer;">Guardar</button>' +
+    '</div>' +
+    '<button onclick="document.getElementById(\'emergency-panel\').style.display=\'none\'" style="width:100%;margin-top:0.5rem;padding:0.5rem;background:#f0f0f0;border:none;border-radius:8px;color:#666;cursor:pointer;">Cancelar</button>' +
+  '</div>';
+  // Init canvas drawing
+  setTimeout(initSignatureCanvas, 100);
+}
+
+function initSignatureCanvas() {
+  var canvas = document.getElementById('sig-canvas');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var drawing = false;
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+
+  function getPos(e) {
+    var rect = canvas.getBoundingClientRect();
+    var touch = e.touches ? e.touches[0] : e;
+    return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
+  }
+
+  canvas.addEventListener('mousedown', function(e) { drawing = true; var p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); });
+  canvas.addEventListener('mousemove', function(e) { if (!drawing) return; var p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); });
+  canvas.addEventListener('mouseup', function() { drawing = false; });
+  canvas.addEventListener('touchstart', function(e) { e.preventDefault(); drawing = true; var p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); });
+  canvas.addEventListener('touchmove', function(e) { e.preventDefault(); if (!drawing) return; var p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); });
+  canvas.addEventListener('touchend', function() { drawing = false; });
+}
+
+function clearSignature() {
+  var canvas = document.getElementById('sig-canvas');
+  if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function saveSignature(tripId) {
+  var canvas = document.getElementById('sig-canvas');
+  if (!canvas) return;
+  var dataUrl = canvas.toDataURL('image/png');
+  uploadEvidence(tripId, 'signature', 'Firma de entrega', dataUrl);
+  document.getElementById('emergency-panel').style.display = 'none';
+}
+
+async function uploadEvidence(tripId, type, description, imageData) {
+  updateStatus('Subiendo ' + (type === 'photo' ? 'foto' : 'firma') + '...', 'warning');
+  try {
+    var pos = null;
+    try { pos = await new Promise(function(ok, fail) { navigator.geolocation.getCurrentPosition(ok, fail, { timeout: 5000 }); }); } catch(e) {}
+    await fetch(API_BASE + '/api/my-trips/' + tripId + '/evidence', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        deviceId: deviceId, type: type, description: description, image_data: imageData,
+        latitude: pos ? pos.coords.latitude : null, longitude: pos ? pos.coords.longitude : null,
+      }),
+    });
+    updateStatus((type === 'photo' ? '📷 Foto' : '✍️ Firma') + ' guardada ✓', 'success');
+  } catch(e) { updateStatus('Error subiendo', 'error'); }
 }
 
 // ============ HISTORIAL ============

@@ -1071,6 +1071,53 @@ app.put('/api/my-trips/:tripId/complete', async (req, res) => {
   finally { if (conn) conn.release(); }
 });
 
+// Subir foto de evidencia o firma (público, desde conductor)
+app.post('/api/my-trips/:tripId/evidence', async (req, res) => {
+  const { deviceId, type, description, image_data, latitude, longitude } = req.body;
+  if (!deviceId || !type || !image_data) return res.status(400).json({ error: 'Faltan datos' });
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    await conn.query('INSERT INTO trip_evidence (trip_id, device_id, type, description, image_data, latitude, longitude) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [req.params.tripId, deviceId, type, description || '', image_data, latitude || null, longitude || null]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: 'Error interno' }); }
+  finally { if (conn) conn.release(); }
+});
+
+// Ver evidencias de un viaje (admin)
+app.get('/api/trips/:tripId/evidence', auth, async (req, res) => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    var rows = await conn.query('SELECT id, type, description, latitude, longitude, created_at FROM trip_evidence WHERE trip_id=? ORDER BY created_at DESC', [req.params.tripId]);
+    res.json(rows);
+  } catch (err) { res.status(500).json({ error: 'Error interno' }); }
+  finally { if (conn) conn.release(); }
+});
+
+// Ver imagen individual
+app.get('/api/evidence/:id/image', async (req, res) => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    var rows = await conn.query('SELECT image_data FROM trip_evidence WHERE id=?', [req.params.id]);
+    if (!rows.length) return res.status(404).json({ error: 'No encontrado' });
+    var imgData = rows[0].image_data;
+    if (imgData.startsWith('data:')) {
+      var parts = imgData.split(',');
+      var mime = parts[0].match(/:(.*?);/)[1];
+      var buffer = Buffer.from(parts[1], 'base64');
+      res.set('Content-Type', mime);
+      res.send(buffer);
+    } else {
+      res.set('Content-Type', 'image/png');
+      res.send(Buffer.from(imgData, 'base64'));
+    }
+  } catch (err) { res.status(500).json({ error: 'Error interno' }); }
+  finally { if (conn) conn.release(); }
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log('TrackMonk API v2 corriendo en puerto ' + PORT);
 });
