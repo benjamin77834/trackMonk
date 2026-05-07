@@ -55,7 +55,34 @@ class APIManager: ObservableObject {
     
     func sendLocation(lat: Double, lng: Double, acc: Double) {
         guard !deviceId.isEmpty else { return }
-        post("/api/location", body: ["deviceId": deviceId, "latitude": lat, "longitude": lng, "accuracy": acc]) { _ in }
+        let payload: [String: Any] = ["deviceId": deviceId, "latitude": lat, "longitude": lng, "accuracy": acc]
+        post("/api/location", body: payload) { json in
+            if json != nil {
+                // Éxito: enviar cola offline
+                self.sendOfflineQueue()
+            } else {
+                // Sin conexión: guardar offline
+                self.saveOffline(payload)
+            }
+        }
+    }
+    
+    private func saveOffline(_ payload: [String: Any]) {
+        var queue = UserDefaults.standard.array(forKey: "offlineQueue") as? [[String: Any]] ?? []
+        queue.append(payload)
+        if queue.count > 100 { queue = Array(queue.suffix(100)) }
+        UserDefaults.standard.set(queue, forKey: "offlineQueue")
+    }
+    
+    private func sendOfflineQueue() {
+        guard var queue = UserDefaults.standard.array(forKey: "offlineQueue") as? [[String: Any]], !queue.isEmpty else { return }
+        let item = queue.removeFirst()
+        UserDefaults.standard.set(queue, forKey: "offlineQueue")
+        post("/api/location", body: item) { json in
+            if json != nil && !queue.isEmpty {
+                self.sendOfflineQueue() // enviar siguiente
+            }
+        }
     }
     
     func sendAlert(type: String, message: String, lat: Double?, lng: Double?, acc: Double?) {
