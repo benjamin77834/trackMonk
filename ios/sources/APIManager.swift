@@ -159,6 +159,15 @@ class APIManager: ObservableObject {
         }
     }
     
+    func uploadEvidence(tripId: Int, type: String, description: String, imageData: String) {
+        post("/api/my-trips/\(tripId)/evidence", body: [
+            "deviceId": deviceId,
+            "type": type,
+            "description": description,
+            "image_data": imageData
+        ]) { _ in }
+    }
+    
     func logout() {
         driverName = ""
         userId = ""

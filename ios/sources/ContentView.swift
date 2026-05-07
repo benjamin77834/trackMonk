@@ -362,6 +362,22 @@ struct TripSection: View {
                             .cornerRadius(8).bold()
                     }
                     
+                    // Evidencia (opcional)
+                    HStack(spacing: 8) {
+                        Button(action: { showCamera = true }) {
+                            Label("📷 Foto", systemImage: "camera")
+                                .frame(maxWidth: .infinity).padding(.vertical, 8)
+                                .background(Color.orange).foregroundColor(.white)
+                                .cornerRadius(8).font(.caption).bold()
+                        }
+                        Button(action: { showSignature = true }) {
+                            Label("✍️ Firma", systemImage: "pencil.tip")
+                                .frame(maxWidth: .infinity).padding(.vertical, 8)
+                                .background(Color.blue).foregroundColor(.white)
+                                .cornerRadius(8).font(.caption).bold()
+                        }
+                    }
+                    
                     Button(action: completeTrip) {
                         Text("✅ Terminar viaje")
                             .frame(maxWidth: .infinity).padding(.vertical, 10)
@@ -375,7 +391,17 @@ struct TripSection: View {
         .background(Color(.systemBackground))
         .cornerRadius(12)
         .shadow(radius: 2)
+        .sheet(isPresented: $showCamera) {
+            ImagePicker(image: $capturedImage, onDone: uploadPhoto)
+        }
+        .sheet(isPresented: $showSignature) {
+            SignatureView(onSave: uploadSignature)
+        }
     }
+    
+    @State private var showCamera = false
+    @State private var showSignature = false
+    @State private var capturedImage: UIImage? = nil
     
     func addCost() {
         guard let tripId = api.activeTrip?["id"] as? Int,
@@ -390,5 +416,21 @@ struct TripSection: View {
     func completeTrip() {
         guard let tripId = api.activeTrip?["id"] as? Int else { return }
         api.completeMyTrip(tripId: tripId) { _ in }
+    }
+    
+    func uploadPhoto() {
+        guard let tripId = api.activeTrip?["id"] as? Int,
+              let image = capturedImage,
+              let data = image.jpegData(compressionQuality: 0.5) else { return }
+        let base64 = "data:image/jpeg;base64," + data.base64EncodedString()
+        api.uploadEvidence(tripId: tripId, type: "photo", description: "Foto desde iPhone", imageData: base64)
+        capturedImage = nil
+    }
+    
+    func uploadSignature(_ image: UIImage) {
+        guard let tripId = api.activeTrip?["id"] as? Int,
+              let data = image.pngData() else { return }
+        let base64 = "data:image/png;base64," + data.base64EncodedString()
+        api.uploadEvidence(tripId: tripId, type: "signature", description: "Firma de entrega", imageData: base64)
     }
 }
