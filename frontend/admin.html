@@ -52,6 +52,9 @@
         <button class="nav-item" onclick="navigate('messages')">
           <span class="nav-icon">💬</span><span class="nav-label">Mensajes</span>
         </button>
+        <button class="nav-item" onclick="navigate('geofences')">
+          <span class="nav-icon">📐</span><span class="nav-label">Geocercas</span>
+        </button>
         <button class="nav-item nav-super" style="display:none;" onclick="navigate('companies')">
           <span class="nav-icon">🏢</span><span class="nav-label">Empresas</span>
         </button>
@@ -170,6 +173,19 @@
           <button onclick="loadAllMessages()" class="btn btn-secondary">🔄</button>
         </div>
         <div id="messages-list"></div>
+      </section>
+
+      <!-- Page: Geocercas -->
+      <section id="page-geofences" class="page">
+        <div class="toolbar">
+          <button onclick="showNewGeofenceForm()" class="btn btn-primary">➕ Nueva geocerca</button>
+          <button onclick="loadGeofences()" class="btn btn-secondary">🔄</button>
+        </div>
+        <div id="geofences-list" class="grid"></div>
+        <div style="margin-top:1rem;">
+          <h3 style="margin-bottom:0.5rem;">Alertas de geocerca recientes</h3>
+          <div id="geofence-alerts-list"></div>
+        </div>
       </section>
 
       <!-- Page: Empresas (super admin) -->

@@ -109,7 +109,7 @@ function navigate(page) {
   if (event && event.currentTarget) event.currentTarget.classList.add('active');
   var pageEl = document.getElementById('page-' + page);
   if (pageEl) pageEl.classList.add('active');
-  var titles = { dashboard:'Dashboard', devices:'Dispositivos', map:'Mapa', trips:'Viajes', alerts:'Alertas', search:'Buscar', messages:'Mensajes', companies:'Empresas', users:'Usuarios', settings:'Configuración' };
+  var titles = { dashboard:'Dashboard', devices:'Dispositivos', map:'Mapa', trips:'Viajes', alerts:'Alertas', search:'Buscar', messages:'Mensajes', geofences:'Geocercas', companies:'Empresas', users:'Usuarios', settings:'Configuración' };
   document.getElementById('page-title').textContent = titles[page] || page;
   closeDetailDirect();
   document.querySelector('.sidebar').classList.remove('open');
@@ -119,6 +119,7 @@ function navigate(page) {
   if (page === 'trips') loadTrips();
   if (page === 'alerts') loadAlerts();
   if (page === 'messages') loadAllMessages();
+  if (page === 'geofences') { loadGeofences(); loadGeofenceAlerts(); }
   if (page === 'companies') loadCompanies();
   if (page === 'users') loadUsers();
   if (page === 'settings') loadSettings();
@@ -193,6 +194,7 @@ async function loadDevices() {
           '<button onclick="sendMessage(' + d.id + ')" class="btn btn-accent2 btn-sm">💬</button>' +
           '<button onclick="viewOnMap(' + d.id + ')" class="btn btn-secondary btn-sm">🗺️</button>' +
           '<button onclick="viewHistory(' + d.id + ')" class="btn btn-secondary btn-sm">📋</button>' +
+          '<button onclick="showMileage(' + d.id + ')" class="btn btn-secondary btn-sm">📏</button>' +
           '<button onclick="editDevice(' + d.id + ')" class="btn btn-secondary btn-sm">✏️</button>' +
           '<button onclick="toggleBlock(' + d.id + ')" class="btn btn-secondary btn-sm" title="Bloquear/Desbloquear">🔒</button>' +
           '<button onclick="deleteDevice(' + d.id + ')" class="btn btn-danger btn-sm">🗑️</button>' +
@@ -779,6 +781,107 @@ async function loadAllMessages() {
       (hasReply ? '<div style="margin-top:0.5rem;padding:0.5rem;background:#dcfce7;border-radius:6px;font-size:0.85rem;"><strong>↩️ Respuesta:</strong> ' + esc(m.reply) + '<span style="font-size:0.7rem;color:#888;margin-left:0.5rem;">' + (m.replied_at ? new Date(m.replied_at).toLocaleString('es-MX') : '') + '</span></div>' : '<div style="margin-top:0.25rem;font-size:0.75rem;color:#999;">Sin respuesta</div>') +
     '</div>';
   });
+}
+
+// ============ GEOFENCES ============
+
+async function loadGeofences() {
+  var res = await af(API_BASE + '/api/geofences');
+  var fences = await res.json();
+  var list = document.getElementById('geofences-list');
+  list.innerHTML = '';
+  if (!fences.length) { list.innerHTML = '<div class="empty">No hay geocercas. Crea una para alertar cuando un vehículo salga de una zona.</div>'; return; }
+  fences.forEach(function(f) {
+    list.innerHTML += '<div class="card">' +
+      '<div class="card-title">📐 ' + esc(f.name) + '</div>' +
+      '<div class="card-meta">📍 ' + f.latitude.toFixed(5) + ', ' + f.longitude.toFixed(5) + '</div>' +
+      '<div class="card-meta">📏 Radio: ' + f.radius_meters + ' metros</div>' +
+      '<div class="card-meta">' + (f.alert_on_exit ? '🚨 Alerta al salir' : '') + (f.alert_on_enter ? ' · 📥 Alerta al entrar' : '') + '</div>' +
+      '<div class="card-actions">' +
+        '<button onclick="deleteGeofence(' + f.id + ',\'' + esc(f.name) + '\')" class="btn btn-danger btn-sm">🗑️ Eliminar</button>' +
+      '</div></div>';
+  });
+}
+
+async function loadGeofenceAlerts() {
+  var res = await af(API_BASE + '/api/geofence-alerts');
+  var alerts = await res.json();
+  var list = document.getElementById('geofence-alerts-list');
+  list.innerHTML = '';
+  if (!alerts.length) { list.innerHTML = '<div class="empty">Sin alertas de geocerca</div>'; return; }
+  alerts.forEach(function(a) {
+    var dt = new Date(a.created_at);
+    list.innerHTML += '<div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid #eee;font-size:0.85rem;">' +
+      '<span>' + (a.event_type === 'exit' ? '🚨 Salió de' : '📥 Entró a') + ' <strong>' + esc(a.fence_name) + '</strong> — ' + esc(a.person_name || a.device_name) + '</span>' +
+      '<span style="color:#888;">' + dt.toLocaleString('es-MX') + '</span></div>';
+  });
+}
+
+function showNewGeofenceForm() {
+  showDetail(
+    '<h3>➕ Nueva geocerca</h3>' +
+    '<p class="card-meta" style="margin-bottom:1rem;">Define una zona. Si un vehículo sale de ella, recibirás una alerta.</p>' +
+    '<div class="form-group"><label>Nombre</label><input id="gf-name" placeholder="Ej: Bodega central, Zona de trabajo"></div>' +
+    '<div class="form-row"><div class="form-group"><label>Latitud</label><input id="gf-lat" type="number" step="0.00001" placeholder="19.4326"></div>' +
+    '<div class="form-group"><label>Longitud</label><input id="gf-lng" type="number" step="0.00001" placeholder="-99.1332"></div></div>' +
+    '<div class="form-group"><label>Radio (metros)</label><input id="gf-radius" type="number" value="500" placeholder="500"></div>' +
+    '<div class="form-row"><div class="form-group"><label><input type="checkbox" id="gf-exit" checked> Alertar al salir</label></div>' +
+    '<div class="form-group"><label><input type="checkbox" id="gf-enter"> Alertar al entrar</label></div></div>' +
+    '<p class="card-meta" style="margin-top:0.5rem;">💡 Tip: Abre Google Maps, click derecho en un punto → "¿Qué hay aquí?" para obtener las coordenadas.</p>' +
+    '<button onclick="createGeofence()" class="btn btn-primary" style="width:100%;margin-top:0.5rem;">Crear geocerca</button>'
+  );
+}
+
+async function createGeofence() {
+  var name = document.getElementById('gf-name').value.trim();
+  var lat = parseFloat(document.getElementById('gf-lat').value);
+  var lng = parseFloat(document.getElementById('gf-lng').value);
+  var radius = parseInt(document.getElementById('gf-radius').value) || 500;
+  var alertExit = document.getElementById('gf-exit').checked ? 1 : 0;
+  var alertEnter = document.getElementById('gf-enter').checked ? 1 : 0;
+  if (!name || isNaN(lat) || isNaN(lng)) { updateStatus('Llena nombre y coordenadas', 'error'); return; }
+  var res = await af(API_BASE + '/api/geofences', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: name, latitude: lat, longitude: lng, radius_meters: radius, alert_on_exit: alertExit, alert_on_enter: alertEnter }),
+  });
+  var data = await res.json();
+  if (data.success) { closeDetailDirect(); updateStatus('Geocerca creada ✓', 'success'); loadGeofences(); }
+  else updateStatus('Error: ' + (data.error || ''), 'error');
+}
+
+async function deleteGeofence(id, name) {
+  if (!confirm('¿Eliminar geocerca "' + name + '"?')) return;
+  await af(API_BASE + '/api/geofences/' + id, { method: 'DELETE' });
+  updateStatus('Eliminada', 'success'); loadGeofences();
+}
+
+// ============ MILEAGE (in device history) ============
+
+async function showMileage(deviceId) {
+  var d = allDevices.find(function(x) { return x.id === deviceId; }) || {};
+  var today = new Date().toISOString().split('T')[0];
+  var weekAgo = new Date(Date.now() - 7*24*60*60*1000).toISOString().split('T')[0];
+  var res = await af(API_BASE + '/api/mileage/' + deviceId + '?from=' + weekAgo + '&to=' + today);
+  var data = await res.json();
+  showDetail(
+    '<h3>📏 Kilometraje — ' + esc(d.person_name || d.device_name) + '</h3>' +
+    '<div style="text-align:center;margin:1rem 0;padding:1.5rem;background:#f0fdf4;border:2px solid #bbf7d0;border-radius:10px;">' +
+      '<div style="font-size:2rem;font-weight:800;">' + data.totalKm + ' km</div>' +
+      '<div style="font-size:0.85rem;color:#666;">Últimos 7 días · ' + data.points + ' puntos</div>' +
+    '</div>' +
+    '<div class="form-row"><div class="form-group"><label>Desde</label><input id="ml-from" type="date" value="' + weekAgo + '"></div>' +
+    '<div class="form-group"><label>Hasta</label><input id="ml-to" type="date" value="' + today + '"></div></div>' +
+    '<button onclick="recalcMileage(' + deviceId + ')" class="btn btn-primary btn-sm" style="width:100%;">Recalcular</button>' +
+    '<div id="mileage-result" style="margin-top:0.5rem;text-align:center;"></div>'
+  );
+}
+
+async function recalcMileage(deviceId) {
+  var from = document.getElementById('ml-from').value;
+  var to = document.getElementById('ml-to').value;
+  var res = await af(API_BASE + '/api/mileage/' + deviceId + '?from=' + from + '&to=' + to);
+  var data = await res.json();
+  document.getElementById('mileage-result').innerHTML = '<strong>' + data.totalKm + ' km</strong> (' + data.points + ' puntos)';
 }
 
 // ============ COMPANIES (super admin) ============
