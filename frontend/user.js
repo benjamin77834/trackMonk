@@ -47,13 +47,39 @@ async function sendLocationSilent() {
     var pos = await new Promise(function(ok, fail) {
       navigator.geolocation.getCurrentPosition(ok, fail, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
     });
-    await fetch(API_BASE + '/api/location', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ deviceId: deviceId, latitude: pos.coords.latitude, longitude: pos.coords.longitude, accuracy: pos.coords.accuracy }),
-    });
+    var payload = { deviceId: deviceId, latitude: pos.coords.latitude, longitude: pos.coords.longitude, accuracy: pos.coords.accuracy, speed: pos.coords.speed || null };
+    try {
+      await fetch(API_BASE + '/api/location', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      // Enviar ubicaciones offline guardadas
+      sendOfflineQueue();
+    } catch(e) {
+      // Sin conexión: guardar en cola offline
+      saveOffline(payload);
+    }
     var lastEl = document.getElementById('last-sent');
     if (lastEl) lastEl.textContent = 'Última actualización: ' + new Date().toLocaleTimeString('es-MX');
   } catch (e) { /* silencioso */ }
+}
+
+function saveOffline(payload) {
+  try {
+    var queue = JSON.parse(localStorage.getItem('offlineQueue') || '[]');
+    queue.push(payload);
+    if (queue.length > 100) queue = queue.slice(-100); // máximo 100
+    localStorage.setItem('offlineQueue', JSON.stringify(queue));
+  } catch(e) {}
+}
+
+async function sendOfflineQueue() {
+  try {
+    var queue = JSON.parse(localStorage.getItem('offlineQueue') || '[]');
+    if (!queue.length) return;
+    for (var i = 0; i < queue.length; i++) {
+      try { await fetch(API_BASE + '/api/location', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(queue[i]) }); }
+      catch(e) { break; } // si falla, dejar el resto para después
+    }
+    localStorage.removeItem('offlineQueue');
+  } catch(e) {}
 }
 
 // ============ DRIVER LOGIN ============

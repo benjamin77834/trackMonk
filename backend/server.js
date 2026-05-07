@@ -606,6 +606,18 @@ app.post('/api/location', async (req, res) => {
     // Verificar geocercas
     checkGeofences(conn, deviceId, latitude, longitude);
 
+    // Verificar velocidad máxima
+    if (speed && speed > 0) {
+      const speedKmh = speed * 3.6; // m/s a km/h
+      const device = await conn.query('SELECT company_id FROM devices WHERE id=?', [deviceId]);
+      if (device.length) {
+        const company = await conn.query('SELECT max_speed_kmh, contact_phone FROM companies WHERE id=?', [device[0].company_id]);
+        if (company.length && company[0].max_speed_kmh && speedKmh > company[0].max_speed_kmh) {
+          console.log('⚠️ VELOCIDAD: Dispositivo ' + deviceId + ' a ' + Math.round(speedKmh) + ' km/h (máx: ' + company[0].max_speed_kmh + ')');
+        }
+      }
+    }
+
     res.json({ success: true });
   } catch (err) { res.status(500).json({ error: 'Error interno' }); }
   finally { if (conn) conn.release(); }
