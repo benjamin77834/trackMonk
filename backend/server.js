@@ -917,8 +917,24 @@ app.post('/api/trips/:id/location', async (req, res) => {
 // Public trip routes for user
 app.get('/api/my-trips/:deviceId', async (req, res) => {
   let conn;
-  try { conn = await pool.getConnection(); res.json(await conn.query("SELECT t.*, (SELECT SUM(amount) FROM trip_costs WHERE trip_id=t.id) as total_cost FROM trips t WHERE t.device_id=? AND t.status='active' ORDER BY t.started_at DESC", [req.params.deviceId])); }
-  catch (err) { res.status(500).json({ error: 'Error interno' }); }
+  try {
+    conn = await pool.getConnection();
+    // Buscar por device_id o por user_id del dispositivo
+    var trips = await conn.query("SELECT t.*, (SELECT SUM(amount) FROM trip_costs WHERE trip_id=t.id) as total_cost FROM trips t WHERE t.device_id=? AND t.status='active' ORDER BY t.started_at DESC", [req.params.deviceId]);
+    if (trips.length === 0) {
+      // Fallback: buscar por user_id
+      var devices = await conn.query('SELECT user_id FROM devices WHERE id=?', [req.params.deviceId]);
+      if (devices.length > 0 && devices[0].user_id) {
+        var userDevices = await conn.query('SELECT id FROM devices WHERE user_id=?', [devices[0].user_id]);
+        var deviceIds = userDevices.map(function(d) { return d.id; });
+        if (deviceIds.length > 0) {
+          var ph = deviceIds.map(function() { return '?'; }).join(',');
+          trips = await conn.query("SELECT t.*, (SELECT SUM(amount) FROM trip_costs WHERE trip_id=t.id) as total_cost FROM trips t WHERE t.device_id IN (" + ph + ") AND t.status='active' ORDER BY t.started_at DESC", deviceIds);
+        }
+      }
+    }
+    res.json(trips);
+  } catch (err) { res.status(500).json({ error: 'Error interno' }); }
   finally { if (conn) conn.release(); }
 });
 
