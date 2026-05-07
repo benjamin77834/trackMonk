@@ -595,14 +595,121 @@ app.get('/api/track-status/:requestId', auth, async (req, res) => {
 // ============ LOCATIONS ============
 
 app.post('/api/location', async (req, res) => {
-  const { deviceId, requestId, latitude, longitude, accuracy } = req.body;
+  const { deviceId, requestId, latitude, longitude, accuracy, speed } = req.body;
   if (!deviceId || latitude == null || longitude == null) return res.status(400).json({ error: 'Faltan datos' });
   let conn;
   try {
     conn = await pool.getConnection();
-    await conn.query('INSERT INTO locations (device_id, latitude, longitude, accuracy) VALUES (?, ?, ?, ?)', [deviceId, latitude, longitude, accuracy || null]);
+    await conn.query('INSERT INTO locations (device_id, latitude, longitude, accuracy, speed) VALUES (?, ?, ?, ?, ?)', [deviceId, latitude, longitude, accuracy || null, speed || null]);
     if (requestId) await conn.query("UPDATE tracking_requests SET status='received', responded_at=NOW() WHERE id=?", [requestId]);
+
+    // Verificar geocercas
+    checkGeofences(conn, deviceId, latitude, longitude);
+
     res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: 'Error interno' }); }
+  finally { if (conn) conn.release(); }
+});
+
+// Verificar si el dispositivo salió/entró de una geocerca
+async function checkGeofences(conn, deviceId, lat, lng) {
+  try {
+    const device = await conn.query('SELECT company_id FROM devices WHERE id=?', [deviceId]);
+    if (!device.length) return;
+    const companyId = device[0].company_id;
+    const fences = await conn.query('SELECT * FROM geofences WHERE company_id=? AND is_active=1', [companyId]);
+
+    for (const fence of fences) {
+      const distance = getDistanceKm(lat, lng, fence.latitude, fence.longitude) * 1000; // metros
+      const isInside = distance <= fence.radius_meters;
+
+      // Obtener última alerta para este dispositivo y geocerca
+      const lastAlert = await conn.query('SELECT event_type FROM geofence_alerts WHERE geofence_id=? AND device_id=? ORDER BY created_at DESC LIMIT 1', [fence.id, deviceId]);
+      const wasInside = lastAlert.length === 0 || lastAlert[0].event_type === 'enter';
+
+      if (!isInside && wasInside && fence.alert_on_exit) {
+        await conn.query('INSERT INTO geofence_alerts (geofence_id, device_id, event_type, latitude, longitude) VALUES (?, ?, ?, ?, ?)', [fence.id, deviceId, 'exit', lat, lng]);
+        console.log('⚠️ GEOCERCA: Dispositivo ' + deviceId + ' salió de "' + fence.name + '"');
+      } else if (isInside && !wasInside && fence.alert_on_enter) {
+        await conn.query('INSERT INTO geofence_alerts (geofence_id, device_id, event_type, latitude, longitude) VALUES (?, ?, ?, ?, ?)', [fence.id, deviceId, 'enter', lat, lng]);
+      }
+    }
+  } catch (e) { console.error('Geofence check error:', e.message); }
+}
+
+function getDistanceKm(lat1, lng1, lat2, lng2) {
+  var R = 6371;
+  var dLat = (lat2 - lat1) * Math.PI / 180;
+  var dLng = (lng2 - lng1) * Math.PI / 180;
+  var a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2) * Math.sin(dLng/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// ============ GEOFENCES ============
+
+app.get('/api/geofences', auth, async (req, res) => {
+  const cf = companyFilter(req);
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    res.json(await conn.query('SELECT * FROM geofences WHERE 1=1' + cf.sql + ' ORDER BY name', cf.params));
+  } catch (err) { res.status(500).json({ error: 'Error interno' }); }
+  finally { if (conn) conn.release(); }
+});
+
+app.post('/api/geofences', auth, async (req, res) => {
+  const { name, latitude, longitude, radius_meters, alert_on_exit, alert_on_enter, company_id } = req.body;
+  if (!name || !latitude || !longitude) return res.status(400).json({ error: 'Faltan datos' });
+  const cid = req.user.role === 'super_admin' ? (company_id || 1) : req.user.companyId;
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const r = await conn.query('INSERT INTO geofences (company_id, name, latitude, longitude, radius_meters, alert_on_exit, alert_on_enter) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [cid, name, latitude, longitude, radius_meters || 500, alert_on_exit !== undefined ? alert_on_exit : 1, alert_on_enter || 0]);
+    res.json({ success: true, id: Number(r.insertId) });
+  } catch (err) { res.status(500).json({ error: 'Error interno' }); }
+  finally { if (conn) conn.release(); }
+});
+
+app.delete('/api/geofences/:id', auth, async (req, res) => {
+  let conn;
+  try { conn = await pool.getConnection(); await conn.query('DELETE FROM geofences WHERE id=?', [req.params.id]); res.json({ success: true }); }
+  catch (err) { res.status(500).json({ error: 'Error interno' }); }
+  finally { if (conn) conn.release(); }
+});
+
+app.get('/api/geofence-alerts', auth, async (req, res) => {
+  const cf = companyFilter(req);
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    let sql = 'SELECT ga.*, g.name as fence_name, d.person_name, d.device_name FROM geofence_alerts ga JOIN geofences g ON g.id=ga.geofence_id JOIN devices d ON d.id=ga.device_id WHERE 1=1';
+    const params = [];
+    if (cf.sql) { sql += cf.sql.replace('company_id', 'd.company_id'); params.push(...cf.params); }
+    sql += ' ORDER BY ga.created_at DESC LIMIT 50';
+    res.json(await conn.query(sql, params));
+  } catch (err) { res.status(500).json({ error: 'Error interno' }); }
+  finally { if (conn) conn.release(); }
+});
+
+// Kilometraje de un dispositivo entre fechas
+app.get('/api/mileage/:deviceId', auth, async (req, res) => {
+  const { from, to } = req.query;
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    let sql = 'SELECT latitude, longitude, recorded_at FROM locations WHERE device_id=?';
+    const params = [req.params.deviceId];
+    if (from) { sql += ' AND recorded_at >= ?'; params.push(from + ' 00:00:00'); }
+    if (to) { sql += ' AND recorded_at <= ?'; params.push(to + ' 23:59:59'); }
+    sql += ' ORDER BY recorded_at ASC';
+    const locs = await conn.query(sql, params);
+
+    var totalKm = 0;
+    for (var i = 1; i < locs.length; i++) {
+      totalKm += getDistanceKm(locs[i-1].latitude, locs[i-1].longitude, locs[i].latitude, locs[i].longitude);
+    }
+    res.json({ deviceId: req.params.deviceId, totalKm: Math.round(totalKm * 10) / 10, points: locs.length, from: from, to: to });
   } catch (err) { res.status(500).json({ error: 'Error interno' }); }
   finally { if (conn) conn.release(); }
 });
