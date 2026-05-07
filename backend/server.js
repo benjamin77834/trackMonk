@@ -1077,11 +1077,33 @@ app.post('/api/my-trips/:tripId/evidence', async (req, res) => {
   if (!deviceId || !type || !image_data) return res.status(400).json({ error: 'Faltan datos' });
   let conn;
   try {
+    // Subir a S3
+    const { exec } = require('child_process');
+    const filename = 'evidence/' + req.params.tripId + '/' + Date.now() + '-' + type + '.png';
+    
+    // Extraer base64
+    var base64Data = image_data;
+    if (base64Data.startsWith('data:')) base64Data = base64Data.split(',')[1];
+    
+    // Guardar temporalmente y subir
+    const fs = require('fs');
+    const tmpFile = '/tmp/trackmonk-' + Date.now() + '.png';
+    fs.writeFileSync(tmpFile, Buffer.from(base64Data, 'base64'));
+    
+    const s3Url = 'https://trackmonk-evidence.s3.amazonaws.com/' + filename;
+    
+    await new Promise(function(resolve, reject) {
+      exec('aws s3 cp ' + tmpFile + ' s3://trackmonk-evidence/' + filename + ' --acl public-read --content-type image/png', function(err) {
+        fs.unlinkSync(tmpFile);
+        if (err) reject(err); else resolve();
+      });
+    });
+
     conn = await pool.getConnection();
-    await conn.query('INSERT INTO trip_evidence (trip_id, device_id, type, description, image_data, latitude, longitude) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [req.params.tripId, deviceId, type, description || '', image_data, latitude || null, longitude || null]);
-    res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: 'Error interno' }); }
+    await conn.query('INSERT INTO trip_evidence (trip_id, device_id, type, description, image_url, latitude, longitude) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [req.params.tripId, deviceId, type, description || '', s3Url, latitude || null, longitude || null]);
+    res.json({ success: true, url: s3Url });
+  } catch (err) { console.error('Evidence upload error:', err); res.status(500).json({ error: 'Error subiendo' }); }
   finally { if (conn) conn.release(); }
 });
 
@@ -1090,7 +1112,7 @@ app.get('/api/trips/:tripId/evidence', auth, async (req, res) => {
   let conn;
   try {
     conn = await pool.getConnection();
-    var rows = await conn.query('SELECT id, type, description, latitude, longitude, created_at FROM trip_evidence WHERE trip_id=? ORDER BY created_at DESC', [req.params.tripId]);
+    var rows = await conn.query('SELECT id, type, description, image_url, latitude, longitude, created_at FROM trip_evidence WHERE trip_id=? ORDER BY created_at DESC', [req.params.tripId]);
     res.json(rows);
   } catch (err) { res.status(500).json({ error: 'Error interno' }); }
   finally { if (conn) conn.release(); }
