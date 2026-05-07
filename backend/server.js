@@ -1152,6 +1152,38 @@ app.get('/api/evidence/:id/image', async (req, res) => {
   finally { if (conn) conn.release(); }
 });
 
+// ============ PAYMENT WEBHOOK ============
+
+app.post('/api/payment-webhook', async (req, res) => {
+  console.log('Payment webhook:', JSON.stringify(req.body));
+  const { spawn } = require('child_process');
+  var payload = JSON.stringify(req.body);
+  var proc = spawn('python3', ['-c', 'import boto3,json; c=boto3.client("lambda",region_name="us-east-1"); c.invoke(FunctionName="trackmonk_postback",InvocationType="Event",Payload=json.dumps(' + JSON.stringify(req.body) + '))']);
+  proc.on('close', function() {});
+  res.json({ success: true });
+});
+
+// Generar link de pago (admin)
+app.post('/api/payments/create', auth, async (req, res) => {
+  const { company_id, plan } = req.body;
+  if (!company_id || !plan) return res.status(400).json({ error: 'company_id y plan requeridos' });
+  const { spawn } = require('child_process');
+  
+  var payload = JSON.stringify({ company_id: company_id, plan: plan, email: '' });
+  var script = 'import boto3,json; c=boto3.client("lambda",region_name="us-east-1"); r=c.invoke(FunctionName="trackmonk_pago",Payload=json.dumps(' + payload + ')); print(r["Payload"].read().decode())';
+  
+  var proc = spawn('python3', ['-c', script]);
+  var output = '';
+  proc.stdout.on('data', function(d) { output += d.toString(); });
+  proc.on('close', function() {
+    try {
+      var result = JSON.parse(output);
+      var body = JSON.parse(result.body || '{}');
+      res.json(body);
+    } catch(e) { res.status(500).json({ error: 'Error procesando pago', detail: output }); }
+  });
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log('TrackMonk API v2 corriendo en puerto ' + PORT);
 });
