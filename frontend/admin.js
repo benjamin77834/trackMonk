@@ -902,7 +902,7 @@ async function loadCompanies() {
       (c.contact_email?'<div class="card-meta">📧 '+esc(c.contact_email)+'</div>':'') +
       (c.demo_until?'<div class="card-meta">🆓 Demo hasta: '+new Date(c.demo_until).toLocaleDateString('es-MX')+'</div>':'') +
       '<div class="card-meta">' + (c.is_active?'<span style="color:#22c55e;">● Activa</span>':'<span style="color:#ef4444;">● Inactiva</span>') + '</div>' +
-      '<div class="card-actions"><button onclick="editCompany('+c.id+')" class="btn btn-secondary btn-sm">✏️ Editar</button><button onclick="deleteCompany('+c.id+',\''+esc(c.name)+'\')" class="btn btn-danger btn-sm">🗑️</button></div></div>';
+      '<div class="card-actions"><button onclick="editCompany('+c.id+')" class="btn btn-secondary btn-sm">✏️ Editar</button><button onclick="generatePaymentLink('+c.id+',\''+esc(c.plan||'basic')+'\')" class="btn btn-success btn-sm">💳 Cobrar</button><button onclick="deleteCompany('+c.id+',\''+esc(c.name)+'\')" class="btn btn-danger btn-sm">🗑️</button></div></div>';
   });
 }
 
@@ -936,6 +936,42 @@ async function saveCompany(id) {
 }
 
 async function deleteCompany(id, name) { if (!confirm('¿Eliminar "'+name+'"?')) return; await af(API_BASE+'/api/companies/'+id,{method:'DELETE'}); updateStatus('Eliminada','success'); loadCompanies(); }
+
+async function generatePaymentLink(companyId, currentPlan) {
+  showDetail(
+    '<h3>💳 Generar cobro</h3>' +
+    '<div class="form-group"><label>Plan a cobrar</label><select id="pay-plan">' +
+      '<option value="basic"' + (currentPlan==='basic'?' selected':'') + '>Básico - $1,999/mes</option>' +
+      '<option value="pro"' + (currentPlan==='pro'?' selected':'') + '>Pro - $3,299/mes</option>' +
+      '<option value="enterprise"' + (currentPlan==='enterprise'?' selected':'') + '>Enterprise - $4,999/mes</option>' +
+    '</select></div>' +
+    '<button onclick="doGeneratePayment(' + companyId + ')" class="btn btn-primary" style="width:100%;margin-top:0.5rem;">Generar link de pago</button>' +
+    '<div id="payment-result" style="margin-top:1rem;"></div>'
+  );
+}
+
+async function doGeneratePayment(companyId) {
+  var plan = document.getElementById('pay-plan').value;
+  var resultDiv = document.getElementById('payment-result');
+  resultDiv.innerHTML = '<p style="color:#888;">Generando link...</p>';
+  try {
+    var res = await af(API_BASE + '/api/payments/create', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ company_id: companyId, plan: plan }),
+    });
+    var data = await res.json();
+    if (data.payment_url) {
+      resultDiv.innerHTML = '<div style="background:#dcfce7;padding:1rem;border-radius:8px;">' +
+        '<p style="font-weight:600;color:#16a34a;">✅ Link generado</p>' +
+        '<p style="font-size:0.85rem;margin-top:0.5rem;">Envía este link al cliente:</p>' +
+        '<input type="text" value="' + data.payment_url + '" style="width:100%;padding:0.5rem;border:1px solid #ddd;border-radius:6px;margin-top:0.5rem;" onclick="this.select()">' +
+        '<a href="https://wa.me/?text=' + encodeURIComponent('Hola, aquí está tu link de pago para TrackMonk: ' + data.payment_url) + '" target="_blank" class="btn btn-success" style="display:block;text-align:center;margin-top:0.5rem;text-decoration:none;">📲 Enviar por WhatsApp</a>' +
+      '</div>';
+    } else {
+      resultDiv.innerHTML = '<p style="color:#ef4444;">Error: ' + (data.error || 'No se pudo generar') + '</p>';
+    }
+  } catch(e) { resultDiv.innerHTML = '<p style="color:#ef4444;">Error de conexión</p>'; }
+}
 
 // ============ USERS ============
 
