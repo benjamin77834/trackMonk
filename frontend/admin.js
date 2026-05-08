@@ -259,22 +259,30 @@ async function saveDevice(id) {
 }
 
 async function viewHistory(deviceId) {
-  var res = await af(API_BASE + '/api/locations/' + deviceId + '?limit=100');
-  var locations = await res.json();
   var d = allDevices.find(function(x) { return x.id === deviceId; }) || {};
+  // Primero mostrar resumen por día
+  var dailyRes = await af(API_BASE + '/api/locations/' + deviceId + '/daily');
+  var daily = await dailyRes.json();
   var html = '<h3>📋 ' + esc(d.person_name || d.device_name) + '</h3>';
-  if (!locations.length) { html += '<div class="empty">Sin historial</div>'; showDetail(html); return; }
-  html += '<p class="card-meta">' + locations.length + ' registros</p>';
-  locations.forEach(function(loc, i) {
-    var dt = new Date(loc.recorded_at);
-    var latest = i === 0;
-    html += '<div class="history-item' + (latest ? ' history-latest' : '') + '"><div>' +
-      '<span style="color:' + (latest ? '#22c55e' : '#999') + '">' + (latest ? '🔴 ÚLTIMA' : '📌') + '</span> ' +
-      dt.toLocaleDateString('es-MX', {weekday:'short',day:'numeric',month:'short'}) + ' <span style="color:#888">' + dt.toLocaleTimeString('es-MX') + '</span></div>' +
-      '<a href="https://www.google.com/maps?q=' + loc.latitude + ',' + loc.longitude + '" target="_blank">🗺️</a></div>';
+  if (!daily.length) { html += '<div class="empty">Sin historial</div>'; showDetail(html); return; }
+  html += '<p class="card-meta">Historial por día (click para ver detalle)</p>';
+  daily.forEach(function(day) {
+    var dt = new Date(day.day + 'T12:00:00');
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:0.6rem 0;border-bottom:1px solid #eee;cursor:pointer;" onclick="viewDayTrack(' + deviceId + ',\'' + day.day + '\')">' +
+      '<div><strong>📅 ' + dt.toLocaleDateString('es-MX', {weekday:'long',day:'numeric',month:'long'}) + '</strong><br><span style="font-size:0.8rem;color:#888;">' + day.points + ' puntos · ' + new Date(day.first_time).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}) + ' - ' + new Date(day.last_time).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}) + '</span></div>' +
+      '<span style="color:#22c55e;">🗺️ →</span></div>';
   });
-  html += '<button onclick="viewOnMap(' + deviceId + ');closeDetailDirect();" class="btn btn-accent2" style="width:100%;margin-top:0.75rem;">🗺️ Ver en mapa</button>';
+  html += '<button onclick="viewOnMap(' + deviceId + ');closeDetailDirect();" class="btn btn-accent2" style="width:100%;margin-top:0.75rem;">🗺️ Ver todo en mapa</button>';
   showDetail(html);
+}
+
+async function viewDayTrack(deviceId, day) {
+  var sel = document.getElementById('map-device-filter');
+  if (sel) sel.value = deviceId;
+  document.getElementById('map-date-from').value = day;
+  document.getElementById('map-date-to').value = day;
+  closeDetailDirect();
+  filterMapByDevice();
 }
 
 async function sendMessage(deviceId) {

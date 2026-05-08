@@ -731,12 +731,28 @@ app.get('/api/locations/:deviceId', auth, async (req, res) => {
   let conn;
   try {
     conn = await pool.getConnection();
-    let sql = 'SELECT * FROM locations WHERE device_id=?';
+    let sql = 'SELECT *, DATE(recorded_at) as day FROM locations WHERE device_id=?';
     const params = [req.params.deviceId];
     if (from) { sql += ' AND recorded_at >= ?'; params.push(from + ' 00:00:00'); }
     if (to) { sql += ' AND recorded_at <= ?'; params.push(to + ' 23:59:59'); }
     sql += ' ORDER BY recorded_at DESC LIMIT ?';
     params.push(parseInt(req.query.limit) || 200);
+    res.json(await conn.query(sql, params));
+  } catch (err) { res.status(500).json({ error: 'Error interno' }); }
+  finally { if (conn) conn.release(); }
+});
+
+// Resumen de tracks por día
+app.get('/api/locations/:deviceId/daily', auth, async (req, res) => {
+  const { from, to } = req.query;
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    let sql = 'SELECT DATE(recorded_at) as day, COUNT(*) as points, MIN(recorded_at) as first_time, MAX(recorded_at) as last_time FROM locations WHERE device_id=?';
+    const params = [req.params.deviceId];
+    if (from) { sql += ' AND recorded_at >= ?'; params.push(from + ' 00:00:00'); }
+    if (to) { sql += ' AND recorded_at <= ?'; params.push(to + ' 23:59:59'); }
+    sql += ' GROUP BY DATE(recorded_at) ORDER BY day DESC LIMIT 30';
     res.json(await conn.query(sql, params));
   } catch (err) { res.status(500).json({ error: 'Error interno' }); }
   finally { if (conn) conn.release(); }
