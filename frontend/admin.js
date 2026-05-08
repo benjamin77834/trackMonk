@@ -61,6 +61,7 @@ async function adminLogin() {
       currentRole = data.role;
       sessionStorage.setItem('adminToken', adminToken);
       sessionStorage.setItem('adminRole', currentRole);
+      sessionStorage.setItem('adminName', data.name || username);
       showDashboard();
     } else {
       document.getElementById('status-login').textContent = 'Credenciales inválidas';
@@ -85,6 +86,9 @@ function showDashboard() {
   if (currentRole === 'super_admin') {
     document.querySelectorAll('.nav-super').forEach(function(el) { el.style.display = 'flex'; });
   }
+  var adminName = sessionStorage.getItem('adminName') || '';
+  var userInfo = document.getElementById('admin-user-info');
+  if (userInfo && adminName) userInfo.textContent = '👤 ' + adminName;
   loadDashboard();
   loadDevices();
   loadAlertCount();

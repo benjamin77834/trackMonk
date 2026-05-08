@@ -108,6 +108,7 @@ async function driverLogin() {
       driverCompanySlug = data.companySlug || '';
       localStorage.setItem('driverUserId', driverUserId);
       localStorage.setItem('driverCompanySlug', driverCompanySlug);
+      localStorage.setItem('driverName', data.name || username);
       if (data.deviceId) { deviceId = String(data.deviceId); localStorage.setItem('deviceId', deviceId); }
       document.getElementById('driver-login-section').style.display = 'none';
       if ('serviceWorker' in navigator) { try { await navigator.serviceWorker.register('/sw.js'); navigator.serviceWorker.addEventListener('message', handleSWMessage); } catch(e){} }
