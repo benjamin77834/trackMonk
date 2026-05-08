@@ -267,9 +267,10 @@ async function viewHistory(deviceId) {
   if (!daily.length) { html += '<div class="empty">Sin historial</div>'; showDetail(html); return; }
   html += '<p class="card-meta">Historial por día (click para ver detalle)</p>';
   daily.forEach(function(day) {
-    var dt = new Date(day.day + 'T12:00:00');
-    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:0.6rem 0;border-bottom:1px solid #eee;cursor:pointer;" onclick="viewDayTrack(' + deviceId + ',\'' + day.day + '\')">' +
-      '<div><strong>📅 ' + dt.toLocaleDateString('es-MX', {weekday:'long',day:'numeric',month:'long'}) + '</strong><br><span style="font-size:0.8rem;color:#888;">' + day.points + ' puntos · ' + new Date(day.first_time).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}) + ' - ' + new Date(day.last_time).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'}) + '</span></div>' +
+    var dt = new Date(day.day);
+    var dayStr = dt.toISOString().split('T')[0];
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:0.6rem 0;border-bottom:1px solid #eee;cursor:pointer;" onclick="viewDayTrack(' + deviceId + ',\'' + dayStr + '\')">' +
+      '<div><strong>📅 ' + dt.toLocaleDateString('es-MX', {weekday:'long',day:'numeric',month:'long',timeZone:'America/Mexico_City'}) + '</strong><br><span style="font-size:0.8rem;color:#888;">' + day.points + ' puntos · ' + new Date(day.first_time).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',timeZone:'America/Mexico_City'}) + ' - ' + new Date(day.last_time).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit',timeZone:'America/Mexico_City'}) + '</span></div>' +
       '<span style="color:#22c55e;">🗺️ →</span></div>';
   });
   html += '<button onclick="viewOnMap(' + deviceId + ');closeDetailDirect();" class="btn btn-accent2" style="width:100%;margin-top:0.75rem;">🗺️ Ver todo en mapa</button>';
