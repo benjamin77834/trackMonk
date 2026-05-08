@@ -831,14 +831,62 @@ function showNewGeofenceForm() {
     '<h3>➕ Nueva geocerca</h3>' +
     '<p class="card-meta" style="margin-bottom:1rem;">Define una zona. Si un vehículo sale de ella, recibirás una alerta.</p>' +
     '<div class="form-group"><label>Nombre</label><input id="gf-name" placeholder="Ej: Bodega central, Zona de trabajo"></div>' +
+    '<div class="form-group"><label>Buscar dirección</label><div style="display:flex;gap:0.5rem;"><input id="gf-address" placeholder="Ej: Av. Reforma 222, CDMX" style="flex:1;padding:0.5rem;border:1px solid #ddd;border-radius:8px;"><button onclick="searchAddress()" class="btn btn-primary btn-sm">🔍 Buscar</button></div></div>' +
+    '<div id="gf-map" style="height:250px;border-radius:8px;border:1px solid #ddd;margin:0.75rem 0;"></div>' +
     '<div class="form-row"><div class="form-group"><label>Latitud</label><input id="gf-lat" type="number" step="0.00001" placeholder="19.4326"></div>' +
     '<div class="form-group"><label>Longitud</label><input id="gf-lng" type="number" step="0.00001" placeholder="-99.1332"></div></div>' +
-    '<div class="form-group"><label>Radio (metros)</label><input id="gf-radius" type="number" value="500" placeholder="500"></div>' +
+    '<div class="form-group"><label>Radio (metros)</label><input id="gf-radius" type="number" value="500" placeholder="500" oninput="updateGeofenceCircle()"></div>' +
     '<div class="form-row"><div class="form-group"><label><input type="checkbox" id="gf-exit" checked> Alertar al salir</label></div>' +
     '<div class="form-group"><label><input type="checkbox" id="gf-enter"> Alertar al entrar</label></div></div>' +
-    '<p class="card-meta" style="margin-top:0.5rem;">💡 Tip: Abre Google Maps, click derecho en un punto → "¿Qué hay aquí?" para obtener las coordenadas.</p>' +
     '<button onclick="createGeofence()" class="btn btn-primary" style="width:100%;margin-top:0.5rem;">Crear geocerca</button>'
   );
+  // Inicializar mini mapa
+  setTimeout(initGeofenceMap, 200);
+}
+
+var gfMap = null;
+var gfCircle = null;
+var gfMarker = null;
+
+function initGeofenceMap() {
+  var el = document.getElementById('gf-map');
+  if (!el) return;
+  gfMap = L.map('gf-map').setView([19.4326, -99.1332], 12);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' }).addTo(gfMap);
+  // Click en mapa para seleccionar punto
+  gfMap.on('click', function(e) {
+    document.getElementById('gf-lat').value = e.latlng.lat.toFixed(6);
+    document.getElementById('gf-lng').value = e.latlng.lng.toFixed(6);
+    updateGeofenceCircle();
+  });
+}
+
+function updateGeofenceCircle() {
+  var lat = parseFloat(document.getElementById('gf-lat').value);
+  var lng = parseFloat(document.getElementById('gf-lng').value);
+  var radius = parseInt(document.getElementById('gf-radius').value) || 500;
+  if (isNaN(lat) || isNaN(lng)) return;
+  if (gfCircle) gfMap.removeLayer(gfCircle);
+  if (gfMarker) gfMap.removeLayer(gfMarker);
+  gfCircle = L.circle([lat, lng], { radius: radius, color: '#22c55e', fillColor: '#22c55e', fillOpacity: 0.2 }).addTo(gfMap);
+  gfMarker = L.marker([lat, lng]).addTo(gfMap);
+  gfMap.setView([lat, lng], 14);
+}
+
+async function searchAddress() {
+  var address = document.getElementById('gf-address').value.trim();
+  if (!address) return;
+  try {
+    var res = await fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(address) + '&limit=1');
+    var data = await res.json();
+    if (data.length > 0) {
+      document.getElementById('gf-lat').value = parseFloat(data[0].lat).toFixed(6);
+      document.getElementById('gf-lng').value = parseFloat(data[0].lon).toFixed(6);
+      updateGeofenceCircle();
+    } else {
+      updateStatus('Dirección no encontrada', 'warning');
+    }
+  } catch(e) { updateStatus('Error buscando dirección', 'error'); }
 }
 
 async function createGeofence() {
