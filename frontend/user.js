@@ -27,7 +27,7 @@ async function init() {
     } catch (e) {}
   }
 
-  if (deviceId) { showRegistered(); startPolling(); }
+  if (deviceId) { await saveDeviceIdToCache(deviceId); showRegistered(); startPolling(); }
   else { showRegistration(); updateStatus('Registra tu dispositivo'); }
 }
 
@@ -109,10 +109,10 @@ async function driverLogin() {
       localStorage.setItem('driverUserId', driverUserId);
       localStorage.setItem('driverCompanySlug', driverCompanySlug);
       localStorage.setItem('driverName', data.name || username);
-      if (data.deviceId) { deviceId = String(data.deviceId); localStorage.setItem('deviceId', deviceId); }
+      if (data.deviceId) { deviceId = String(data.deviceId); localStorage.setItem('deviceId', deviceId); await saveDeviceIdToCache(deviceId); }
       document.getElementById('driver-login-section').style.display = 'none';
       if ('serviceWorker' in navigator) { try { await navigator.serviceWorker.register('/sw.js'); navigator.serviceWorker.addEventListener('message', handleSWMessage); } catch(e){} }
-      if (deviceId) { showRegistered(); } else { showRegistration(); updateStatus('Registra tu dispositivo'); }
+      if (deviceId) { showRegistered(); startPolling(); } else { showRegistration(); updateStatus('Registra tu dispositivo'); }
     } else { updateStatus('Credenciales inválidas', 'error'); }
   } catch (err) { updateStatus('Error de conexión', 'error'); }
 }

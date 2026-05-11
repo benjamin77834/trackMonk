@@ -345,6 +345,11 @@ async function trackDevice(id) {
     var res = await af(API_BASE + '/api/track/' + id, { method: 'POST' });
     var data = await res.json();
     if (data.success) { updateStatus('Push enviado, esperando...', 'success'); pollStatus(data.requestId, id); }
+    else if (data.error === 'Sin push activado') {
+      // Fallback: mostrar última ubicación conocida
+      updateStatus('Sin push — mostrando última ubicación', 'warning');
+      viewOnMap(id);
+    }
     else updateStatus('Error: ' + (data.error || ''), 'error');
   } catch (e) { updateStatus('Error: ' + e.message, 'error'); }
 }

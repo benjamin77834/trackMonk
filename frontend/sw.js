@@ -1,4 +1,10 @@
 // Service Worker - TrackMonk
+// Estrategia de tracking:
+// 1. Push llega → intenta obtener ubicación desde cliente abierto
+// 2. Si no hay cliente → abre location-reporter automáticamente (sin toque)
+// 3. Notificación como fallback visual si lo anterior falla
+
+var API_BASE = 'https://api-tracker.monkeyfon.com';
 
 self.addEventListener('install', function(event) {
   self.skipWaiting();
@@ -17,19 +23,8 @@ self.addEventListener('push', function(event) {
   var data = event.data.json();
 
   if (data.type === 'track-location') {
-    // Mostrar notificación y intentar obtener ubicación
     event.waitUntil(
-      self.registration.showNotification('📍 Toca aquí para enviar tu ubicación', {
-        body: 'Tu empresa solicita tu ubicación. Toca esta notificación.',
-        icon: '/icon-192.png',
-        tag: 'location-request-' + data.requestId,
-        requireInteraction: true,
-        data: { type: 'track-location', requestId: data.requestId },
-        actions: [{ action: 'send', title: '📍 Enviar ubicación' }],
-      }).then(function() {
-        // Intentar enviar ubicación si hay un cliente abierto
-        return tryGetLocation(data.requestId);
-      })
+      handleTrackLocation(data.requestId)
     );
   }
 
@@ -44,11 +39,71 @@ self.addEventListener('push', function(event) {
   }
 });
 
+function handleTrackLocation(requestId) {
+  return getDeviceId().then(function(deviceId) {
+    // Paso 1: Intentar desde un cliente abierto
+    return clients.matchAll({ type: 'window' }).then(function(allClients) {
+      if (allClients.length > 0 && deviceId) {
+        // Hay cliente abierto → pedirle ubicación directamente
+        allClients[0].postMessage({
+          type: 'get-location',
+          requestId: requestId,
+          deviceId: deviceId,
+        });
+        // Mostrar notificación silenciosa (se cierra sola si responde)
+        return self.registration.showNotification('📍 Enviando ubicación...', {
+          body: 'Obteniendo GPS automáticamente...',
+          icon: '/icon-192.png',
+          tag: 'location-request-' + requestId,
+          data: { type: 'track-location', requestId: requestId, autoSent: true },
+          silent: true,
+        });
+      }
+
+      // Paso 2: No hay cliente abierto → abrir location-reporter automáticamente
+      if (deviceId) {
+        return clients.openWindow('/location-reporter.html?requestId=' + requestId + '&deviceId=' + deviceId + '&auto=1')
+          .then(function() {
+            // Notificación informativa (el reporter ya está enviando)
+            return self.registration.showNotification('📍 Enviando ubicación...', {
+              body: 'Se abrió el GPS automáticamente.',
+              icon: '/icon-192.png',
+              tag: 'location-request-' + requestId,
+              data: { type: 'track-location', requestId: requestId, autoSent: true },
+              silent: true,
+            });
+          })
+          .catch(function() {
+            // Si openWindow falla (restricción del navegador), mostrar notificación interactiva
+            return showFallbackNotification(requestId);
+          });
+      }
+
+      // Paso 3: No tenemos deviceId → notificación para que toque
+      return showFallbackNotification(requestId);
+    });
+  });
+}
+
+function showFallbackNotification(requestId) {
+  return self.registration.showNotification('📍 Toca aquí para enviar tu ubicación', {
+    body: 'Tu empresa solicita tu ubicación. Toca esta notificación.',
+    icon: '/icon-192.png',
+    tag: 'location-request-' + requestId,
+    requireInteraction: true,
+    data: { type: 'track-location', requestId: requestId },
+    actions: [{ action: 'send', title: '📍 Enviar ubicación' }],
+  });
+}
+
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
   var notifData = event.notification.data || {};
 
   if (notifData.type === 'track-location' && notifData.requestId) {
+    // Si ya se envió automáticamente, solo cerrar
+    if (notifData.autoSent) return;
+
     // Abrir location-reporter para enviar ubicación
     event.waitUntil(
       getDeviceId().then(function(deviceId) {
@@ -70,27 +125,8 @@ self.addEventListener('notificationclick', function(event) {
   }
 });
 
-function tryGetLocation(requestId) {
-  return clients.matchAll({ type: 'window' }).then(function(allClients) {
-    if (allClients.length > 0) {
-      // Hay un cliente abierto, pedirle la ubicación
-      return getDeviceId().then(function(deviceId) {
-        if (!deviceId) return;
-        allClients[0].postMessage({
-          type: 'get-location',
-          requestId: requestId,
-          deviceId: deviceId,
-        });
-      });
-    }
-    // No hay clientes abiertos - la ubicación se enviará cuando toquen la notificación
-    return Promise.resolve();
-  });
-}
-
 function getDeviceId() {
   return clients.matchAll({ type: 'window' }).then(function(allClients) {
-    // Primero intentar desde un cliente activo
     if (allClients.length > 0) {
       return new Promise(function(resolve) {
         var channel = new MessageChannel();
@@ -99,11 +135,9 @@ function getDeviceId() {
         setTimeout(function() { resolve(null); }, 3000);
       }).then(function(id) {
         if (id) return id;
-        // Fallback al cache
         return getDeviceIdFromCache();
       });
     }
-    // Sin clientes, usar cache
     return getDeviceIdFromCache();
   });
 }

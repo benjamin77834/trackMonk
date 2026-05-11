@@ -26,6 +26,7 @@
     var params = new URLSearchParams(window.location.search);
     var requestId = params.get('requestId');
     var deviceId = params.get('deviceId');
+    var isAuto = params.get('auto') === '1';
 
     async function report() {
       var statusEl = document.getElementById('status');
@@ -44,16 +45,26 @@
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
             accuracy: position.coords.accuracy,
+            speed: position.coords.speed || null,
           }),
         });
         spinner.style.display = 'none';
         statusEl.textContent = '✅ Ubicación enviada';
         statusEl.className = 'success';
-        setTimeout(function() { window.close(); }, 3000);
+        // Cerrar más rápido en modo automático
+        var delay = isAuto ? 1500 : 3000;
+        setTimeout(function() { window.close(); }, delay);
       } catch (err) {
         spinner.style.display = 'none';
         statusEl.textContent = '❌ Error: ' + err.message;
         statusEl.className = 'error';
+        // En modo auto, reintentar una vez
+        if (isAuto && !window._retried) {
+          window._retried = true;
+          statusEl.textContent = 'Reintentando...';
+          spinner.style.display = 'block';
+          setTimeout(report, 2000);
+        }
       }
     }
 
