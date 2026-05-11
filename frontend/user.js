@@ -44,16 +44,22 @@ function startPolling() {
 async function sendLocationSilent() {
   if (!deviceId) return;
   try {
-    var pos = await new Promise(function(ok, fail) {
-      navigator.geolocation.getCurrentPosition(ok, fail, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
-    });
+    var pos;
+    try {
+      pos = await new Promise(function(ok, fail) {
+        navigator.geolocation.getCurrentPosition(ok, fail, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
+      });
+    } catch(e) {
+      // Fallback: baja precisión (WiFi/celular) para Firefox
+      pos = await new Promise(function(ok, fail) {
+        navigator.geolocation.getCurrentPosition(ok, fail, { enableHighAccuracy: false, timeout: 20000, maximumAge: 120000 });
+      });
+    }
     var payload = { deviceId: deviceId, latitude: pos.coords.latitude, longitude: pos.coords.longitude, accuracy: pos.coords.accuracy, speed: pos.coords.speed || null };
     try {
       await fetch(API_BASE + '/api/location', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-      // Enviar ubicaciones offline guardadas
       sendOfflineQueue();
     } catch(e) {
-      // Sin conexión: guardar en cola offline
       saveOffline(payload);
     }
     var lastEl = document.getElementById('last-sent');
@@ -181,7 +187,7 @@ async function registerDevice() {
   try {
     // 1. Pedir permiso de GPS (no bloquea registro si falla)
     var gpsOk = false;
-    try { await new Promise(function(ok, fail) { navigator.geolocation.getCurrentPosition(ok, fail, { enableHighAccuracy: true, timeout: 10000 }); }); gpsOk = true; } catch(e) { console.log('GPS no disponible aún, continuando registro...'); }
+    try { await new Promise(function(ok, fail) { navigator.geolocation.getCurrentPosition(ok, fail, { enableHighAccuracy: true, timeout: 20000 }); }); gpsOk = true; } catch(e) { console.log('GPS no disponible aún, continuando registro...'); }
 
     // 2. Registrar SW si no está registrado
     if ('serviceWorker' in navigator) {
