@@ -179,7 +179,15 @@ async function registerDevice() {
   if (!deviceName) { updateStatus('Ingresa nombre del dispositivo', 'error'); return; }
   updateStatus('Registrando...');
   try {
+    // 1. Verificar GPS
     try { await new Promise(function(ok, fail) { navigator.geolocation.getCurrentPosition(ok, fail, { enableHighAccuracy: true, timeout: 10000 }); }); } catch(e) { updateStatus('Permite acceso a ubicación', 'error'); return; }
+
+    // 2. Registrar SW si no está registrado
+    if ('serviceWorker' in navigator) {
+      try { await navigator.serviceWorker.register('/sw.js'); } catch(e) {}
+    }
+
+    // 3. Intentar suscribir push (no bloquea si falla)
     var subscription = null;
     if (hasPush && 'serviceWorker' in navigator) {
       try {
@@ -190,8 +198,10 @@ async function registerDevice() {
           pushSubscription = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(vk.publicKey) });
           subscription = pushSubscription.toJSON();
         }
-      } catch(e) {}
+      } catch(e) { console.log('Push subscription failed, continuing without push:', e); }
     }
+
+    // 4. Registrar dispositivo en backend
     var res = await fetch(API_BASE + '/api/devices/register', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ deviceName: deviceName, subscription: subscription, companySlug: driverCompanySlug, userId: driverUserId }),
@@ -206,7 +216,7 @@ async function registerDevice() {
           body: JSON.stringify({ device_name: deviceName, person_name: personName, phone: phone, company: company, vehicle: vehicle }),
         });
       }
-      sendMyLocation(); showRegistered();
+      sendMyLocation(); showRegistered(); startPolling();
     } else { updateStatus('Error: ' + (data.error || ''), 'error'); }
   } catch (err) { updateStatus('Error: ' + err.message, 'error'); }
 }
