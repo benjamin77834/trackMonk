@@ -32,9 +32,18 @@
       var statusEl = document.getElementById('status');
       var spinner = document.getElementById('spinner');
       try {
-        var position = await new Promise(function(ok, fail) {
-          navigator.geolocation.getCurrentPosition(ok, fail, { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 });
-        });
+        var position;
+        try {
+          position = await new Promise(function(ok, fail) {
+            navigator.geolocation.getCurrentPosition(ok, fail, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+          });
+        } catch(e) {
+          // Fallback: baja precisión para Firefox
+          statusEl.textContent = 'Intentando con red...';
+          position = await new Promise(function(ok, fail) {
+            navigator.geolocation.getCurrentPosition(ok, fail, { enableHighAccuracy: false, timeout: 20000, maximumAge: 120000 });
+          });
+        }
         statusEl.textContent = 'Enviando...';
         await fetch(API_BASE + '/api/location', {
           method: 'POST',
@@ -51,19 +60,18 @@
         spinner.style.display = 'none';
         statusEl.textContent = '✅ Ubicación enviada';
         statusEl.className = 'success';
-        // Cerrar más rápido en modo automático
         var delay = isAuto ? 1500 : 3000;
         setTimeout(function() { window.close(); }, delay);
       } catch (err) {
-        spinner.style.display = 'none';
-        statusEl.textContent = '❌ Error: ' + err.message;
-        statusEl.className = 'error';
-        // En modo auto, reintentar una vez
-        if (isAuto && !window._retried) {
+        // Si ambos intentos fallan, reintentar una vez más después de 3s
+        if (!window._retried) {
           window._retried = true;
-          statusEl.textContent = 'Reintentando...';
-          spinner.style.display = 'block';
-          setTimeout(report, 2000);
+          statusEl.textContent = 'Reintentando en 3s...';
+          setTimeout(report, 3000);
+        } else {
+          spinner.style.display = 'none';
+          statusEl.innerHTML = '❌ GPS bloqueado.<br><br><span style="font-size:0.8rem;color:#666;">En Firefox: toca el 🔒 en la barra de dirección → Permisos → Ubicación → Permitir.<br><br>O usa <strong>Chrome</strong> para mejor compatibilidad.</span>';
+          statusEl.className = 'error';
         }
       }
     }

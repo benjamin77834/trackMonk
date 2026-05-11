@@ -163,7 +163,34 @@ async function showRegistered() {
 
   var hasPushActive = false;
   if (hasPush && 'serviceWorker' in navigator) {
-    try { var reg = await navigator.serviceWorker.ready; hasPushActive = !!(await reg.pushManager.getSubscription()); } catch(e){}
+    try {
+      var reg = await navigator.serviceWorker.ready;
+      var sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        hasPushActive = true;
+        // Siempre actualizar la subscription en el backend (por si cambió de navegador)
+        try {
+          await fetch(API_BASE + '/api/devices/' + deviceId + '/push', {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ subscription: sub.toJSON() }),
+          });
+        } catch(e) {}
+      } else {
+        // No hay subscription, intentar suscribir automáticamente
+        try {
+          var vapidRes = await fetch(API_BASE + '/api/vapid-public-key'); var vk = await vapidRes.json();
+          var permission = await Notification.requestPermission();
+          if (permission === 'granted') {
+            pushSubscription = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(vk.publicKey) });
+            await fetch(API_BASE + '/api/devices/' + deviceId + '/push', {
+              method: 'PUT', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ subscription: pushSubscription.toJSON() }),
+            });
+            hasPushActive = true;
+          }
+        } catch(e) {}
+      }
+    } catch(e){}
   }
   var pushBtn = document.getElementById('activate-push-btn');
   if (pushBtn) pushBtn.style.display = hasPushActive ? 'none' : 'block';
@@ -254,15 +281,28 @@ async function activatePush() {
 
 async function sendMyLocation() {
   if (!deviceId) return;
+  updateStatus('Obteniendo GPS...', 'warning');
   try {
-    var position = await new Promise(function(ok, fail) { navigator.geolocation.getCurrentPosition(ok, fail, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }); });
+    var position;
+    try {
+      position = await new Promise(function(ok, fail) { navigator.geolocation.getCurrentPosition(ok, fail, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }); });
+    } catch(e) {
+      // Fallback baja precisión para Firefox
+      position = await new Promise(function(ok, fail) { navigator.geolocation.getCurrentPosition(ok, fail, { enableHighAccuracy: false, timeout: 20000, maximumAge: 60000 }); });
+    }
     await fetch(API_BASE + '/api/location', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ deviceId: deviceId, latitude: position.coords.latitude, longitude: position.coords.longitude, accuracy: position.coords.accuracy }),
+      body: JSON.stringify({ deviceId: deviceId, latitude: position.coords.latitude, longitude: position.coords.longitude, accuracy: position.coords.accuracy, speed: position.coords.speed || null }),
     });
     updateStatus('Ubicación enviada ✓', 'success');
     document.getElementById('last-sent').textContent = 'Última: ' + new Date().toLocaleString();
-  } catch (err) { updateStatus('Error: ' + err.message, 'error'); }
+  } catch (err) {
+    if (err.code === 1) {
+      updateStatus('⚠️ GPS bloqueado. Toca 🔒 en la barra → Permisos → Ubicación → Permitir. O usa Chrome.', 'error');
+    } else {
+      updateStatus('GPS no disponible. Verifica que el GPS esté encendido.', 'error');
+    }
+  }
 }
 
 // ============ EMERGENCIA ============
