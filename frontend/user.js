@@ -179,8 +179,9 @@ async function registerDevice() {
   if (!deviceName) { updateStatus('Ingresa nombre del dispositivo', 'error'); return; }
   updateStatus('Registrando...');
   try {
-    // 1. Verificar GPS
-    try { await new Promise(function(ok, fail) { navigator.geolocation.getCurrentPosition(ok, fail, { enableHighAccuracy: true, timeout: 10000 }); }); } catch(e) { updateStatus('Permite acceso a ubicación', 'error'); return; }
+    // 1. Pedir permiso de GPS (no bloquea registro si falla)
+    var gpsOk = false;
+    try { await new Promise(function(ok, fail) { navigator.geolocation.getCurrentPosition(ok, fail, { enableHighAccuracy: true, timeout: 10000 }); }); gpsOk = true; } catch(e) { console.log('GPS no disponible aún, continuando registro...'); }
 
     // 2. Registrar SW si no está registrado
     if ('serviceWorker' in navigator) {
@@ -217,6 +218,7 @@ async function registerDevice() {
         });
       }
       sendMyLocation(); showRegistered(); startPolling();
+      if (!gpsOk) updateStatus('Registrado ✓ (activa ubicación en ajustes)', 'warning');
     } else { updateStatus('Error: ' + (data.error || ''), 'error'); }
   } catch (err) { updateStatus('Error: ' + err.message, 'error'); }
 }
