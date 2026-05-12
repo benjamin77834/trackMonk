@@ -1,7 +1,4 @@
 // Service Worker - TrackMonk
-// Estrategia de tracking:
-// 1. Push llega → intenta obtener ubicación desde cliente abierto (focus para despertar)
-// 2. Si no hay cliente → notificación interactiva (openWindow no funciona sin interacción)
 
 var API_BASE = 'https://api-tracker.monkeyfon.com';
 
@@ -13,27 +10,20 @@ self.addEventListener('activate', function(event) {
   event.waitUntil(clients.claim());
 });
 
-// Periodic Background Sync — envía ubicación aunque la app esté cerrada
+// Periodic Background Sync
 self.addEventListener('periodicsync', function(event) {
   if (event.tag === 'send-location') {
-    event.waitUntil(sendLocationFromSW());
+    event.waitUntil(
+      clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(allClients) {
+        if (allClients.length > 0) {
+          allClients[0].postMessage({ type: 'send-location-silent' });
+        }
+      })
+    );
   }
 });
 
-function sendLocationFromSW() {
-  return getDeviceIdFromCache().then(function(deviceId) {
-    if (!deviceId) return;
-    return clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(allClients) {
-      if (allClients.length > 0) {
-        allClients[0].postMessage({ type: 'send-location-silent' });
-        return;
-      }
-    });
-  });
-}
-
 self.addEventListener('fetch', function(event) {
-  // Network first, cache fallback - solo para recursos estáticos
   if (event.request.method !== 'GET') return;
   if (event.request.url.indexOf('/api/') !== -1) return;
 
@@ -57,76 +47,54 @@ self.addEventListener('push', function(event) {
   var data = event.data.json();
 
   if (data.type === 'track-location') {
-    event.waitUntil(handleTrackLocation(data.requestId));
+    event.waitUntil(
+      // Mostrar notificación Y pedir ubicación al mismo tiempo
+      Promise.all([
+        self.registration.showNotification('📍 Enviando ubicación...', {
+          body: 'Obteniendo GPS...',
+          icon: '/icons/icon-192.png',
+          tag: 'location-request-' + data.requestId,
+          silent: true,
+          data: { type: 'track-location', requestId: data.requestId },
+        }),
+        tryGetLocation(data.requestId)
+      ])
+    );
   }
 
   if (data.type === 'custom-message') {
     event.waitUntil(
       self.registration.showNotification(data.title || 'TrackMonk', {
         body: data.body || '',
-        icon: '/icon-192.png',
+        icon: '/icons/icon-192.png',
         tag: 'custom-message',
       })
     );
   }
 });
 
-function handleTrackLocation(requestId) {
-  return getDeviceIdFromCache().then(function(deviceId) {
-    return clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(allClients) {
-      if (allClients.length > 0 && deviceId) {
-        // Hay cliente en background → despertarlo con focus y pedirle ubicación
-        var client = allClients[0];
-
-        // Enviar mensaje a TODOS los clientes (por si uno responde)
-        allClients.forEach(function(c) {
-          c.postMessage({
+function tryGetLocation(requestId) {
+  return clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(allClients) {
+    if (allClients.length > 0) {
+      return getDeviceIdFromCache().then(function(deviceId) {
+        if (!deviceId) return;
+        // Enviar a todos los clientes
+        allClients.forEach(function(client) {
+          client.postMessage({
             type: 'get-location',
             requestId: requestId,
             deviceId: deviceId,
           });
         });
-
-        // Intentar hacer focus para despertar el tab
-        if (client.focus) {
-          return client.focus().then(function() {
-            return self.registration.showNotification('📍 Enviando ubicación...', {
-              body: 'GPS automático activado',
-              icon: '/icon-192.png',
-              tag: 'location-request-' + requestId,
-              data: { type: 'track-location', requestId: requestId, autoSent: true },
-              silent: true,
-            });
-          }).catch(function() {
-            // Focus falló, mostrar notificación normal
-            return showFallbackNotification(requestId, deviceId);
-          });
-        }
-
-        // Si no puede hacer focus, notificación silenciosa (el mensaje ya se envió)
-        return self.registration.showNotification('📍 Enviando ubicación...', {
-          body: 'GPS automático activado',
-          icon: '/icon-192.png',
-          tag: 'location-request-' + requestId,
-          data: { type: 'track-location', requestId: requestId, autoSent: true },
-          silent: true,
-        });
-      }
-
-      // No hay cliente abierto → notificación para que toque
-      return showFallbackNotification(requestId, deviceId);
+      });
+    }
+    // No hay clientes — intentar abrir location-reporter automáticamente
+    return getDeviceIdFromCache().then(function(deviceId) {
+      if (!deviceId) return;
+      return clients.openWindow('/location-reporter.html?requestId=' + requestId + '&deviceId=' + deviceId + '&auto=1').catch(function() {
+        // Si falla, la notificación ya está visible para que toquen
+      });
     });
-  });
-}
-
-function showFallbackNotification(requestId, deviceId) {
-  return self.registration.showNotification('📍 Toca para enviar ubicación', {
-    body: 'Tu empresa solicita tu ubicación.',
-    icon: '/icon-192.png',
-    tag: 'location-request-' + requestId,
-    requireInteraction: true,
-    data: { type: 'track-location', requestId: requestId, deviceId: deviceId },
-    actions: [{ action: 'send', title: '📍 Enviar' }],
   });
 }
 
@@ -134,12 +102,9 @@ self.addEventListener('notificationclick', function(event) {
   event.notification.close();
   var notifData = event.notification.data || {};
 
-  if (notifData.type === 'track-location') {
-    if (notifData.autoSent) return;
-
+  if (notifData.type === 'track-location' && notifData.requestId) {
     event.waitUntil(
       getDeviceIdFromCache().then(function(deviceId) {
-        deviceId = deviceId || notifData.deviceId;
         if (deviceId) {
           return clients.openWindow('/location-reporter.html?requestId=' + notifData.requestId + '&deviceId=' + deviceId);
         }
