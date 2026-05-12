@@ -14,6 +14,29 @@ self.addEventListener('activate', function(event) {
   event.waitUntil(clients.claim());
 });
 
+// Periodic Background Sync — envía ubicación aunque la app esté cerrada
+self.addEventListener('periodicsync', function(event) {
+  if (event.tag === 'send-location') {
+    event.waitUntil(sendLocationFromSW());
+  }
+});
+
+function sendLocationFromSW() {
+  return getDeviceIdFromCache().then(function(deviceId) {
+    if (!deviceId) return;
+    // Intentar pedir ubicación a un cliente abierto
+    return clients.matchAll({ type: 'window' }).then(function(allClients) {
+      if (allClients.length > 0) {
+        // Hay cliente, pedirle que envíe
+        allClients[0].postMessage({ type: 'send-location-silent' });
+        return;
+      }
+      // No hay cliente — abrir location-reporter brevemente
+      return clients.openWindow('/location-reporter.html?deviceId=' + deviceId + '&auto=1').catch(function() {});
+    });
+  });
+}
+
 self.addEventListener('fetch', function(event) {
   // Pass through
 });

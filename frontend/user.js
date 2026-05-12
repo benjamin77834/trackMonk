@@ -27,7 +27,7 @@ async function init() {
     } catch (e) {}
   }
 
-  if (deviceId) { await saveDeviceIdToCache(deviceId); showRegistered(); startPolling(); }
+  if (deviceId) { await saveDeviceIdToCache(deviceId); showRegistered(); startPolling(); registerPeriodicSync(); }
   else { showRegistration(); updateStatus('Registra tu dispositivo'); }
 }
 
@@ -37,8 +37,22 @@ function startPolling() {
   if (pollingInterval) return;
   // Enviar ubicación inmediatamente
   sendLocationSilent();
-  // Luego cada X minutos
-  pollingInterval = setInterval(sendLocationSilent, POLLING_MINUTES * 60 * 1000);
+  // Luego cada 3 minutos (antes de que Chrome suspenda el tab)
+  pollingInterval = setInterval(sendLocationSilent, 3 * 60 * 1000);
+}
+
+// Periodic Background Sync — funciona con PWA instalada en Chrome Android
+async function registerPeriodicSync() {
+  if (!('serviceWorker' in navigator)) return;
+  try {
+    var reg = await navigator.serviceWorker.ready;
+    if ('periodicSync' in reg) {
+      var status = await navigator.permissions.query({ name: 'periodic-background-sync' });
+      if (status.state === 'granted') {
+        await reg.periodicSync.register('send-location', { minInterval: 5 * 60 * 1000 }); // cada 5 min mínimo
+      }
+    }
+  } catch(e) { /* No soportado o no permitido */ }
 }
 
 async function sendLocationSilent() {
