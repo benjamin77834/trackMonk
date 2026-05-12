@@ -38,7 +38,24 @@ function sendLocationFromSW() {
 }
 
 self.addEventListener('fetch', function(event) {
-  // Pass through
+  // Cache básico para que Chrome detecte la PWA como instalable
+  if (event.request.method === 'GET' && event.request.url.indexOf('/api/') === -1) {
+    event.respondWith(
+      fetch(event.request).then(function(response) {
+        // Cachear recursos estáticos
+        if (response.status === 200) {
+          var clone = response.clone();
+          caches.open('trackmonk-v1').then(function(cache) {
+            cache.put(event.request, clone);
+          });
+        }
+        return response;
+      }).catch(function() {
+        // Offline: servir desde cache
+        return caches.match(event.request);
+      })
+    );
+  }
 });
 
 self.addEventListener('push', function(event) {
