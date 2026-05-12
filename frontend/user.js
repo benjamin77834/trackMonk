@@ -37,8 +37,26 @@ function startPolling() {
   if (pollingInterval) return;
   // Enviar ubicación inmediatamente
   sendLocationSilent();
-  // Luego cada 3 minutos (antes de que Chrome suspenda el tab)
+  // Luego cada 3 minutos
   pollingInterval = setInterval(sendLocationSilent, 3 * 60 * 1000);
+  // Mantener tab vivo en background
+  keepAlive();
+}
+
+// Evita que Chrome suspenda el tab en background
+function keepAlive() {
+  // 1. Web Lock — mantiene el proceso activo
+  if (navigator.locks) {
+    navigator.locks.request('trackmonk-alive', { mode: 'shared' }, function() {
+      return new Promise(function() {}); // nunca se resuelve = lock permanente
+    });
+  }
+  // 2. Ping silencioso cada 20s para que Chrome no mate el tab
+  setInterval(function() {
+    if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({ type: 'keepalive' });
+    }
+  }, 20000);
 }
 
 // Periodic Background Sync — funciona con PWA instalada en Chrome Android

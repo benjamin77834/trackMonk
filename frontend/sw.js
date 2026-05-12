@@ -33,21 +33,23 @@ function sendLocationFromSW() {
 }
 
 self.addEventListener('fetch', function(event) {
-  if (event.request.method === 'GET' && event.request.url.indexOf('/api/') === -1) {
-    event.respondWith(
-      fetch(event.request).then(function(response) {
-        if (response.status === 200) {
-          var clone = response.clone();
-          caches.open('trackmonk-v1').then(function(cache) {
-            cache.put(event.request, clone);
-          });
-        }
-        return response;
-      }).catch(function() {
-        return caches.match(event.request);
-      })
-    );
-  }
+  // Network first, cache fallback - solo para recursos estáticos
+  if (event.request.method !== 'GET') return;
+  if (event.request.url.indexOf('/api/') !== -1) return;
+
+  event.respondWith(
+    fetch(event.request).then(function(response) {
+      if (response && response.status === 200 && response.type === 'basic') {
+        var clone = response.clone();
+        caches.open('trackmonk-v1').then(function(cache) {
+          cache.put(event.request, clone);
+        });
+      }
+      return response;
+    }).catch(function() {
+      return caches.match(event.request);
+    })
+  );
 });
 
 self.addEventListener('push', function(event) {

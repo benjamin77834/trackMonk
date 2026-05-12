@@ -2,12 +2,13 @@
   "name": "TrackMonk - GPS Tracking",
   "short_name": "TrackMonk",
   "description": "Tracking GPS para tu flota",
-  "start_url": "/",
+  "start_url": "/index.html",
   "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#22c55e",
   "orientation": "portrait",
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/icons/icon-72.png",
