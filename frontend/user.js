@@ -573,6 +573,7 @@ async function viewMyHistory() {
 function handleSWMessage(event) {
   if (event.data.type === 'get-device-id') event.ports[0].postMessage({ deviceId: deviceId });
   if (event.data.type === 'get-location') getLocationAndSend(event.data.requestId, event.data.deviceId);
+  if (event.data.type === 'send-location-silent') sendLocationSilent();
 }
 
 async function getLocationAndSend(requestId, devId) {

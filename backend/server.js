@@ -211,7 +211,7 @@ const CONFIG_FILE = path.join(__dirname, 'config.json');
 
 function loadConfig() {
   try { return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')); }
-  catch (e) { return { autoTrackEnabled: true, autoTrackInterval: 30 }; }
+  catch (e) { return { autoTrackEnabled: true, autoTrackInterval: 5 }; }
 }
 
 function saveConfig(cfg) {
