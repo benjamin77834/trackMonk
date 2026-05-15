@@ -1320,6 +1320,56 @@ app.post('/api/driver-chat/:deviceId/:otherDeviceId', async (req, res) => {
   finally { if (conn) conn.release(); }
 });
 
+// ============ TRIP DELIVERIES ============
+
+// Listar entregas de un viaje
+app.get('/api/trips/:tripId/deliveries', async (req, res) => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    res.json(await conn.query('SELECT * FROM trip_deliveries WHERE trip_id=? ORDER BY id', [req.params.tripId]));
+  } catch (err) { res.status(500).json({ error: 'Error interno' }); }
+  finally { if (conn) conn.release(); }
+});
+
+// Agregar entrega a un viaje (admin)
+app.post('/api/trips/:tripId/deliveries', auth, async (req, res) => {
+  const { name, address, notes } = req.body;
+  if (!name) return res.status(400).json({ error: 'name requerido' });
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const r = await conn.query('INSERT INTO trip_deliveries (trip_id, name, address, notes) VALUES (?, ?, ?, ?)',
+      [req.params.tripId, name, address || '', notes || '']);
+    res.json({ success: true, id: Number(r.insertId) });
+  } catch (err) { res.status(500).json({ error: 'Error interno' }); }
+  finally { if (conn) conn.release(); }
+});
+
+// Marcar entrega como completada (conductor)
+app.put('/api/deliveries/:id/complete', async (req, res) => {
+  const { signature_url, photo_url } = req.body;
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    await conn.query('UPDATE trip_deliveries SET status="delivered", delivered_at=NOW(), signature_url=?, photo_url=? WHERE id=?',
+      [signature_url || null, photo_url || null, req.params.id]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: 'Error interno' }); }
+  finally { if (conn) conn.release(); }
+});
+
+// Eliminar entrega (admin)
+app.delete('/api/deliveries/:id', auth, async (req, res) => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    await conn.query('DELETE FROM trip_deliveries WHERE id=?', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: 'Error interno' }); }
+  finally { if (conn) conn.release(); }
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log('TrackMonk API v2 corriendo en puerto ' + PORT);
 });

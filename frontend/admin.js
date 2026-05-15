@@ -694,6 +694,55 @@ async function viewTrip(tripId) {
       '<button onclick="addCost(' + tripId + ')" class="btn btn-primary btn-sm">Agregar</button></div>' +
     '<button onclick="viewTripOnMap(' + tripId + ');closeDetailDirect();" class="btn btn-accent2" style="width:100%;margin-top:1rem;">🗺️ Ver recorrido</button>'
   );
+  // Cargar entregas
+  loadTripDeliveries(tripId);
+}
+
+async function loadTripDeliveries(tripId) {
+  try {
+    var res = await af(API_BASE + '/api/trips/' + tripId + '/deliveries');
+    var deliveries = await res.json();
+    var container = document.querySelector('.detail-panel .detail-content') || document.getElementById('detail-content');
+    if (!container) return;
+    var html = '<div style="margin-top:1rem;padding-top:0.75rem;border-top:1px solid #e0e0e0;"><div style="font-size:0.85rem;font-weight:600;margin-bottom:0.5rem;">📦 Entregas (' + deliveries.length + ')</div>';
+    if (deliveries.length) {
+      deliveries.forEach(function(d) {
+        var statusIcon = d.status === 'delivered' ? '✅' : '⏳';
+        var statusColor = d.status === 'delivered' ? '#16a34a' : '#a16207';
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:0.5rem;margin-bottom:0.4rem;background:#f9f9f9;border-radius:8px;border-left:3px solid ' + statusColor + ';">';
+        html += '<div><strong style="font-size:0.85rem;">' + statusIcon + ' ' + esc(d.name) + '</strong>';
+        if (d.address) html += '<br><span style="font-size:0.75rem;color:#666;">📍 ' + esc(d.address) + '</span>';
+        if (d.delivered_at) html += '<br><span style="font-size:0.7rem;color:#999;">Entregado: ' + new Date(d.delivered_at).toLocaleString('es-MX',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) + '</span>';
+        html += '</div>';
+        html += '<button onclick="deleteDelivery(' + d.id + ',' + tripId + ')" class="btn btn-danger btn-sm" style="padding:0.2rem 0.4rem;">🗑️</button>';
+        html += '</div>';
+      });
+    } else {
+      html += '<p style="color:#999;font-size:0.8rem;">Sin entregas asignadas</p>';
+    }
+    html += '<div style="margin-top:0.5rem;display:flex;gap:0.5rem;flex-wrap:wrap;"><input id="del-name" placeholder="Nombre/Cliente" style="flex:2;padding:0.4rem;border:1px solid #e0e0e0;border-radius:6px;font-size:0.8rem;"><input id="del-address" placeholder="Dirección" style="flex:2;padding:0.4rem;border:1px solid #e0e0e0;border-radius:6px;font-size:0.8rem;"><button onclick="addDelivery(' + tripId + ')" class="btn btn-primary btn-sm">+ Agregar</button></div></div>';
+    // Insertar antes del botón de mapa
+    var mapBtn = container.querySelector('[onclick*="viewTripOnMap"]');
+    if (mapBtn) { mapBtn.insertAdjacentHTML('beforebegin', html); }
+    else { container.insertAdjacentHTML('beforeend', html); }
+  } catch(e) {}
+}
+
+async function addDelivery(tripId) {
+  var name = document.getElementById('del-name').value.trim();
+  var address = document.getElementById('del-address').value.trim();
+  if (!name) { updateStatus('Ingresa nombre del cliente/entrega', 'error'); return; }
+  await af(API_BASE + '/api/trips/' + tripId + '/deliveries', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: name, address: address }),
+  });
+  viewTrip(tripId);
+}
+
+async function deleteDelivery(id, tripId) {
+  if (!confirm('¿Eliminar esta entrega?')) return;
+  await af(API_BASE + '/api/deliveries/' + id, { method: 'DELETE' });
+  viewTrip(tripId);
 }
 
 async function addCost(tripId) {

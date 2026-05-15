@@ -474,10 +474,45 @@ async function loadMyTrip() {
     if (!trips.length) { c.style.display = 'none'; return; }
     c.style.display = 'block'; var t = trips[0];
     var costsRes = await fetch(API_BASE + '/api/my-trips/' + t.id + '/costs'); var costs = await costsRes.json();
+    var delRes = await fetch(API_BASE + '/api/trips/' + t.id + '/deliveries'); var deliveries = await delRes.json();
     var total = costs.reduce(function(s,c){return s+parseFloat(c.amount);},0);
     var costsHtml = ''; costs.forEach(function(co){ costsHtml += '<div style="display:flex;justify-content:space-between;padding:0.3rem 0;border-bottom:1px solid #e0e0e0;font-size:0.8rem;"><span>'+escapeHtml(co.concept)+'</span><span>$'+parseFloat(co.amount).toFixed(2)+'</span></div>'; });
-    c.innerHTML = '<div style="background:#fff;border:1px solid #e0e0e0;border-radius:12px;padding:1rem;"><h3 style="font-size:1rem;margin-bottom:0.5rem;">🚛 Viaje activo</h3><div style="display:flex;align-items:center;gap:0.5rem;margin:0.5rem 0;"><span style="width:10px;height:10px;border-radius:50%;background:#22c55e;"></span><span style="font-size:0.85rem;">'+escapeHtml(t.origin)+'</span><span style="flex:1;height:2px;background:#e0e0e0;"></span><span style="font-size:0.85rem;">'+escapeHtml(t.destination)+'</span><span style="width:10px;height:10px;border-radius:50%;background:#ef4444;"></span></div>'+(t.cargo?'<div style="font-size:0.8rem;color:#888;">📦 '+escapeHtml(t.cargo)+'</div>':'')+'<div style="text-align:center;margin:0.75rem 0;padding:0.75rem;background:#f5f5f5;border-radius:8px;"><div style="font-size:0.75rem;color:#888;">Gastos</div><div style="font-size:1.3rem;font-weight:700;">$'+total.toLocaleString('es-MX',{minimumFractionDigits:2})+'</div></div>'+costsHtml+'<div style="margin-top:0.75rem;border-top:1px solid #e0e0e0;padding-top:0.75rem;"><div style="font-size:0.85rem;font-weight:600;margin-bottom:0.5rem;">Agregar gasto</div><div style="display:flex;gap:0.5rem;"><select id="cost-type" style="flex:1;padding:0.5rem;border:1px solid #e0e0e0;border-radius:8px;font-size:0.85rem;"><option value="Gasolina">⛽ Gasolina</option><option value="Caseta">🛣️ Caseta</option><option value="Comida">🍔 Comida</option><option value="Hospedaje">🏨 Hospedaje</option><option value="Mantenimiento">🔧 Mantenimiento</option><option value="Otro">📝 Otro</option></select><input id="cost-amount-user" type="number" step="0.01" placeholder="$0.00" style="width:100px;padding:0.5rem;border:1px solid #e0e0e0;border-radius:8px;font-size:0.85rem;"></div><input id="cost-note-user" type="text" placeholder="Nota (opcional)" style="width:100%;margin-top:0.5rem;padding:0.5rem;border:1px solid #e0e0e0;border-radius:8px;font-size:0.85rem;"><button onclick="addMyTripCost('+t.id+')" style="width:100%;margin-top:0.5rem;padding:0.6rem;background:#22c55e;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Agregar gasto</button><button onclick="takePhoto('+t.id+')" style="width:100%;margin-top:0.5rem;padding:0.6rem;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">📷 Foto de evidencia</button><button onclick="showSignaturePad('+t.id+')" style="width:100%;margin-top:0.5rem;padding:0.6rem;background:#3b82f6;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">✍️ Firma de entrega</button><button onclick="completeMyTrip('+t.id+')" style="width:100%;margin-top:0.75rem;padding:0.7rem;background:#ef4444;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">✅ Terminar viaje</button></div></div>';
+    
+    // Entregas
+    var delHtml = '';
+    if (deliveries.length) {
+      delHtml = '<div style="margin-top:0.75rem;border-top:1px solid #e0e0e0;padding-top:0.75rem;"><div style="font-size:0.85rem;font-weight:600;margin-bottom:0.5rem;">📦 Entregas</div>';
+      deliveries.forEach(function(d) {
+        var isDone = d.status === 'delivered';
+        var statusIcon = isDone ? '✅' : '⏳';
+        var bg = isDone ? '#f0fdf4' : '#fffbeb';
+        var border = isDone ? '#bbf7d0' : '#fde68a';
+        delHtml += '<div style="padding:0.6rem;margin-bottom:0.5rem;background:'+bg+';border:1px solid '+border+';border-radius:8px;">';
+        delHtml += '<div style="display:flex;justify-content:space-between;align-items:center;"><strong style="font-size:0.85rem;">'+statusIcon+' '+escapeHtml(d.name)+'</strong>';
+        if (!isDone) delHtml += '<button onclick="markDelivered('+d.id+','+t.id+')" style="padding:0.3rem 0.6rem;background:#22c55e;color:#fff;border:none;border-radius:6px;font-size:0.75rem;font-weight:600;cursor:pointer;">Entregar</button>';
+        delHtml += '</div>';
+        if (d.address) delHtml += '<div style="font-size:0.75rem;color:#666;margin-top:0.2rem;">📍 '+escapeHtml(d.address)+'</div>';
+        if (isDone && d.delivered_at) delHtml += '<div style="font-size:0.7rem;color:#16a34a;margin-top:0.2rem;">Entregado: '+new Date(d.delivered_at).toLocaleString('es-MX',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+'</div>';
+        delHtml += '</div>';
+      });
+      var pending = deliveries.filter(function(d){return d.status==='pending';}).length;
+      var done = deliveries.filter(function(d){return d.status==='delivered';}).length;
+      delHtml += '<div style="font-size:0.75rem;color:#888;text-align:center;">'+done+'/'+deliveries.length+' entregados</div></div>';
+    }
+
+    c.innerHTML = '<div style="background:#fff;border:1px solid #e0e0e0;border-radius:12px;padding:1rem;"><h3 style="font-size:1rem;margin-bottom:0.5rem;">🚛 Viaje activo</h3><div style="display:flex;align-items:center;gap:0.5rem;margin:0.5rem 0;"><span style="width:10px;height:10px;border-radius:50%;background:#22c55e;"></span><span style="font-size:0.85rem;">'+escapeHtml(t.origin)+'</span><span style="flex:1;height:2px;background:#e0e0e0;"></span><span style="font-size:0.85rem;">'+escapeHtml(t.destination)+'</span><span style="width:10px;height:10px;border-radius:50%;background:#ef4444;"></span></div>'+(t.cargo?'<div style="font-size:0.8rem;color:#888;">📦 '+escapeHtml(t.cargo)+'</div>':'')+delHtml+'<div style="text-align:center;margin:0.75rem 0;padding:0.75rem;background:#f5f5f5;border-radius:8px;"><div style="font-size:0.75rem;color:#888;">Gastos</div><div style="font-size:1.3rem;font-weight:700;">$'+total.toLocaleString('es-MX',{minimumFractionDigits:2})+'</div></div>'+costsHtml+'<div style="margin-top:0.75rem;border-top:1px solid #e0e0e0;padding-top:0.75rem;"><div style="font-size:0.85rem;font-weight:600;margin-bottom:0.5rem;">Agregar gasto</div><div style="display:flex;gap:0.5rem;"><select id="cost-type" style="flex:1;padding:0.5rem;border:1px solid #e0e0e0;border-radius:8px;font-size:0.85rem;"><option value="Gasolina">⛽ Gasolina</option><option value="Caseta">🛣️ Caseta</option><option value="Comida">🍔 Comida</option><option value="Hospedaje">🏨 Hospedaje</option><option value="Mantenimiento">🔧 Mantenimiento</option><option value="Otro">📝 Otro</option></select><input id="cost-amount-user" type="number" step="0.01" placeholder="$0.00" style="width:100px;padding:0.5rem;border:1px solid #e0e0e0;border-radius:8px;font-size:0.85rem;"></div><input id="cost-note-user" type="text" placeholder="Nota (opcional)" style="width:100%;margin-top:0.5rem;padding:0.5rem;border:1px solid #e0e0e0;border-radius:8px;font-size:0.85rem;"><button onclick="addMyTripCost('+t.id+')" style="width:100%;margin-top:0.5rem;padding:0.6rem;background:#22c55e;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Agregar gasto</button><button onclick="takePhoto('+t.id+')" style="width:100%;margin-top:0.5rem;padding:0.6rem;background:#f59e0b;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">📷 Foto de evidencia</button><button onclick="showSignaturePad('+t.id+')" style="width:100%;margin-top:0.5rem;padding:0.6rem;background:#3b82f6;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">✍️ Firma de entrega</button><button onclick="completeMyTrip('+t.id+')" style="width:100%;margin-top:0.75rem;padding:0.7rem;background:#ef4444;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">✅ Terminar viaje</button></div></div>';
   } catch(e) { c.style.display = 'none'; }
+}
+
+async function markDelivered(deliveryId, tripId) {
+  if (!confirm('¿Marcar como entregado?')) return;
+  updateStatus('Marcando entrega...', 'warning');
+  await fetch(API_BASE + '/api/deliveries/' + deliveryId + '/complete', {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
+  });
+  updateStatus('✅ Entregado', 'success');
+  loadMyTrip();
 }
 async function addMyTripCost(tripId) {
   var type = document.getElementById('cost-type').value;
