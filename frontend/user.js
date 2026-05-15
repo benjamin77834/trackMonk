@@ -543,18 +543,25 @@ function resizeAndUpload(tripId, dataUrl) {
 }
 
 function showSignaturePad(tripId) {
-  var panel = document.getElementById('emergency-panel');
-  panel.style.display = 'block';
-  panel.innerHTML = '<div style="background:#fff;border:2px solid #3b82f6;border-radius:12px;padding:1rem;text-align:center;">' +
+  // Crear div de firma debajo del viaje si no existe
+  var sigDiv = document.getElementById('signature-pad-container');
+  if (!sigDiv) {
+    sigDiv = document.createElement('div');
+    sigDiv.id = 'signature-pad-container';
+    var tripDiv = document.getElementById('my-trip');
+    if (tripDiv) tripDiv.appendChild(sigDiv);
+    else { document.getElementById('emergency-panel').style.display = 'block'; sigDiv = document.getElementById('emergency-panel'); }
+  }
+  sigDiv.style.display = 'block';
+  sigDiv.innerHTML = '<div style="background:#fff;border:2px solid #3b82f6;border-radius:12px;padding:1rem;text-align:center;margin-top:0.75rem;">' +
     '<h3 style="color:#3b82f6;margin-bottom:0.5rem;">✍️ Firma de entrega</h3>' +
-    '<canvas id="sig-canvas" width="300" height="150" style="border:1px solid #ddd;border-radius:8px;touch-action:none;"></canvas>' +
+    '<canvas id="sig-canvas" width="300" height="150" style="border:1px solid #ddd;border-radius:8px;touch-action:none;width:100%;"></canvas>' +
     '<div style="margin-top:0.5rem;display:flex;gap:0.5rem;">' +
       '<button onclick="clearSignature()" style="flex:1;padding:0.5rem;background:#f0f0f0;border:none;border-radius:8px;cursor:pointer;">Borrar</button>' +
       '<button onclick="saveSignature(\'' + tripId + '\')" style="flex:1;padding:0.5rem;background:#22c55e;color:#fff;border:none;border-radius:8px;cursor:pointer;">Guardar</button>' +
     '</div>' +
-    '<button onclick="document.getElementById(\'emergency-panel\').style.display=\'none\'" style="width:100%;margin-top:0.5rem;padding:0.5rem;background:#f0f0f0;border:none;border-radius:8px;color:#666;cursor:pointer;">Cancelar</button>' +
+    '<button onclick="document.getElementById(\'signature-pad-container\').style.display=\'none\'" style="width:100%;margin-top:0.5rem;padding:0.5rem;background:#f0f0f0;border:none;border-radius:8px;color:#666;cursor:pointer;">Cancelar</button>' +
   '</div>';
-  // Init canvas drawing
   setTimeout(initSignatureCanvas, 100);
 }
 
