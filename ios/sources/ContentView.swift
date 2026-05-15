@@ -97,6 +97,9 @@ struct ContentView: View {
                         MessagesSection(api: api)
                     }
                     
+                    // Chat con compañeros
+                    DriverChatSection(api: api)
+                    
                     // Viaje activo
                     if api.activeTrip != nil {
                         TripSection(api: api)
@@ -438,5 +441,153 @@ struct TripSection: View {
               let data = image.pngData() else { return }
         let base64 = "data:image/png;base64," + data.base64EncodedString()
         api.uploadEvidence(tripId: tripId, type: "signature", description: "Firma de entrega", imageData: base64)
+    }
+}
+
+// MARK: - Driver Chat Section
+
+struct DriverChatSection: View {
+    @ObservedObject var api: APIManager
+    @State private var expanded = false
+    @State private var selectedContact: Int? = nil
+    @State private var messageText = ""
+    
+    var totalUnread: Int {
+        api.chatUnread.values.reduce(0, +)
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button(action: {
+                expanded.toggle()
+                if expanded {
+                    api.loadChatContacts()
+                    api.loadChatUnread()
+                }
+            }) {
+                HStack {
+                    Text("💬 Chat compañeros").font(.headline)
+                    if totalUnread > 0 {
+                        Text("\(totalUnread)")
+                            .font(.caption).bold()
+                            .padding(.horizontal, 8).padding(.vertical, 2)
+                            .background(Color.blue).foregroundColor(.white)
+                            .cornerRadius(10)
+                    }
+                    Spacer()
+                    Image(systemName: expanded ? "chevron.up" : "chevron.down").foregroundColor(.secondary)
+                }
+            }.foregroundColor(.primary)
+            
+            if expanded {
+                if selectedContact == nil {
+                    // Lista de contactos
+                    if api.chatContacts.isEmpty {
+                        Text("Sin compañeros en tu empresa").font(.caption).foregroundColor(.secondary)
+                    } else {
+                        ForEach(api.chatContacts.indices, id: \.self) { i in
+                            let contact = api.chatContacts[i]
+                            let cId = contact["id"] as? Int ?? 0
+                            let name = contact["person_name"] as? String ?? contact["device_name"] as? String ?? ""
+                            let vehicle = contact["vehicle"] as? String ?? ""
+                            let unread = api.chatUnread[cId] ?? 0
+                            
+                            Button(action: {
+                                selectedContact = cId
+                                api.loadConversation(otherDeviceId: cId)
+                            }) {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(name).font(.subheadline).bold()
+                                        if !vehicle.isEmpty {
+                                            Text("🚗 \(vehicle)").font(.caption2).foregroundColor(.secondary)
+                                        }
+                                    }
+                                    Spacer()
+                                    if unread > 0 {
+                                        Text("\(unread)")
+                                            .font(.caption2).bold()
+                                            .padding(.horizontal, 6).padding(.vertical, 2)
+                                            .background(Color.blue).foregroundColor(.white)
+                                            .cornerRadius(8)
+                                    }
+                                    Image(systemName: "chevron.right").font(.caption).foregroundColor(.secondary)
+                                }
+                                .padding(.vertical, 6)
+                            }.foregroundColor(.primary)
+                            Divider()
+                        }
+                    }
+                } else {
+                    // Conversación
+                    let contact = api.chatContacts.first { ($0["id"] as? Int) == selectedContact }
+                    let contactName = contact?["person_name"] as? String ?? contact?["device_name"] as? String ?? ""
+                    
+                    HStack {
+                        Button(action: { selectedContact = nil }) {
+                            Image(systemName: "arrow.left").font(.caption)
+                        }
+                        Text(contactName).font(.subheadline).bold()
+                        Spacer()
+                        Button(action: { api.loadConversation(otherDeviceId: selectedContact!) }) {
+                            Image(systemName: "arrow.clockwise").font(.caption)
+                        }
+                    }
+                    
+                    ScrollView {
+                        VStack(spacing: 6) {
+                            if api.chatMessages.isEmpty {
+                                Text("Sin mensajes aún").font(.caption).foregroundColor(.secondary).padding()
+                            }
+                            ForEach(api.chatMessages.indices, id: \.self) { i in
+                                let msg = api.chatMessages[i]
+                                let isMine = "\(msg["from_device_id"] ?? "")" == api.deviceId
+                                let body = msg["body"] as? String ?? ""
+                                
+                                HStack {
+                                    if isMine { Spacer() }
+                                    Text(body)
+                                        .font(.caption)
+                                        .padding(.horizontal, 10).padding(.vertical, 6)
+                                        .background(isMine ? Color.green.opacity(0.2) : Color.blue.opacity(0.1))
+                                        .cornerRadius(12)
+                                    if !isMine { Spacer() }
+                                }
+                            }
+                        }
+                    }
+                    .frame(maxHeight: 200)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(8)
+                    
+                    HStack(spacing: 6) {
+                        TextField("Escribe...", text: $messageText)
+                            .textFieldStyle(.roundedBorder)
+                            .font(.caption)
+                        Button(action: sendMessage) {
+                            Image(systemName: "paperplane.fill")
+                                .foregroundColor(.white)
+                                .padding(8)
+                                .background(Color.green)
+                                .cornerRadius(8)
+                        }
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(Color(.systemBackground))
+        .cornerRadius(12)
+        .shadow(radius: 2)
+        .onAppear { api.loadChatUnread() }
+    }
+    
+    func sendMessage() {
+        guard let cId = selectedContact, !messageText.isEmpty else { return }
+        let text = messageText
+        messageText = ""
+        api.sendChatMessage(otherDeviceId: cId, body: text) { ok in
+            if ok { api.loadConversation(otherDeviceId: cId) }
+        }
     }
 }

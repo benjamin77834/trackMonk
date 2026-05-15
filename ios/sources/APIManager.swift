@@ -203,6 +203,55 @@ class APIManager: ObservableObject {
         UserDefaults.standard.removeObject(forKey: "deviceId")
     }
     
+    // MARK: - Driver Chat
+    
+    @Published var chatContacts: [[String: Any]] = []
+    @Published var chatMessages: [[String: Any]] = []
+    @Published var chatUnread: [Int: Int] = [:] // deviceId -> count
+    
+    func loadChatContacts() {
+        guard !deviceId.isEmpty else { return }
+        guard let url = URL(string: base + "/api/driver-chat/contacts/\(deviceId)") else { return }
+        URLSession.shared.dataTask(with: url) { data, _, _ in
+            guard let data = data,
+                  let arr = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return }
+            DispatchQueue.main.async { self.chatContacts = arr }
+        }.resume()
+    }
+    
+    func loadChatUnread() {
+        guard !deviceId.isEmpty else { return }
+        guard let url = URL(string: base + "/api/driver-chat/\(deviceId)/unread") else { return }
+        URLSession.shared.dataTask(with: url) { data, _, _ in
+            guard let data = data,
+                  let arr = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return }
+            var map: [Int: Int] = [:]
+            for item in arr {
+                if let did = item["from_device_id"] as? Int, let count = item["count"] as? Int {
+                    map[did] = count
+                }
+            }
+            DispatchQueue.main.async { self.chatUnread = map }
+        }.resume()
+    }
+    
+    func loadConversation(otherDeviceId: Int) {
+        guard !deviceId.isEmpty else { return }
+        guard let url = URL(string: base + "/api/driver-chat/\(deviceId)/\(otherDeviceId)") else { return }
+        URLSession.shared.dataTask(with: url) { data, _, _ in
+            guard let data = data,
+                  let arr = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return }
+            DispatchQueue.main.async { self.chatMessages = arr }
+        }.resume()
+    }
+    
+    func sendChatMessage(otherDeviceId: Int, body: String, completion: @escaping (Bool) -> Void) {
+        post("/api/driver-chat/\(deviceId)/\(otherDeviceId)", body: ["body": body]) { json in
+            let ok = json?["success"] as? Bool ?? false
+            DispatchQueue.main.async { completion(ok) }
+        }
+    }
+    
     // MARK: - Network
     
     private func post(_ path: String, body: [String: Any], completion: @escaping ([String: Any]?) -> Void) {
