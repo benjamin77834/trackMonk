@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var location = LocationManager()
-    @StateObject private var api = APIManager()
+    @ObservedObject private var api = APIManager.shared
     @AppStorage("isLoggedIn") private var isLoggedIn = false
     @State private var username = ""
     @State private var password = ""
