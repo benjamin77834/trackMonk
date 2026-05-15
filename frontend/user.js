@@ -237,7 +237,10 @@ async function showRegistered() {
   // Mostrar botón de descarga según plataforma
   var dlCard = document.getElementById('download-app-card');
   if (dlCard) {
-    if (isAndroid()) {
+    // Si estamos dentro de la app nativa (WebView), ocultar instrucciones
+    if (window.TrackMonkBridge) {
+      dlCard.style.display = 'none';
+    } else if (isAndroid()) {
       document.getElementById('download-apk-btn').style.display = 'block';
       document.getElementById('install-instructions').style.display = 'block';
     } else if (isIOS()) {
