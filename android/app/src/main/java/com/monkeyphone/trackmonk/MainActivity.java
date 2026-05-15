@@ -69,7 +69,7 @@ public class MainActivity extends AppCompatActivity {
         requestPermissions();
 
         // Cargar la web app
-        webView.loadUrl("https://trackmonk.monkeyfon.com/index.html");
+        webView.loadUrl("https://tracker.monkeyfon.com/index.html");
     }
 
     // Bridge JS -> Native

@@ -3,3 +3,17 @@ node_modules/
 *.db
 .DS_Store
 backend/node_modules/
+
+# Android
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+*.apk
+
+# iOS
+ios/TrackMonkApp.xcodeproj/xcuserdata/
+ios/TrackMonkApp.xcodeproj/project.xcworkspace/xcuserdata/
+
+# Frontend build artifacts
+frontend/trackmonk.apk
