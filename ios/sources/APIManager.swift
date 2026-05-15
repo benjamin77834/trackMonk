@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import WatchConnectivity
+import UserNotifications
 
 class APIManager: ObservableObject {
     static let shared = APIManager()
@@ -145,6 +146,8 @@ class APIManager: ObservableObject {
     
     // MARK: - Trips
     
+    @Published var lastKnownTripId: Int? = nil
+    
     func loadActiveTrip() {
         guard !deviceId.isEmpty else { return }
         guard let url = URL(string: base + "/api/my-trips/\(deviceId)") else { return }
@@ -152,8 +155,22 @@ class APIManager: ObservableObject {
             guard let data = data,
                   let arr = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return }
             DispatchQueue.main.async {
-                self.activeTrip = arr.first
-                if let tripId = self.activeTrip?["id"] as? Int {
+                let newTrip = arr.first
+                let newTripId = newTrip?["id"] as? Int
+                
+                // Detectar viaje nuevo
+                if let tid = newTripId, tid != self.lastKnownTripId {
+                    self.lastKnownTripId = tid
+                    if self.activeTrip == nil {
+                        // Es un viaje nuevo, notificar
+                        let origin = newTrip?["origin"] as? String ?? ""
+                        let destination = newTrip?["destination"] as? String ?? ""
+                        self.showTripNotification(origin: origin, destination: destination)
+                    }
+                }
+                
+                self.activeTrip = newTrip
+                if let tripId = newTripId {
                     self.loadTripCosts(tripId: tripId)
                 }
             }
@@ -252,6 +269,28 @@ class APIManager: ObservableObject {
         post("/api/driver-chat/\(deviceId)/\(otherDeviceId)", body: ["body": body]) { json in
             let ok = json?["success"] as? Bool ?? false
             DispatchQueue.main.async { completion(ok) }
+        }
+    }
+    
+    private func showTripNotification(origin: String, destination: String) {
+        let content = UNMutableNotificationContent()
+        content.title = "🚛 Nuevo viaje asignado"
+        content.body = "📍 \(origin) → \(destination)"
+        content.sound = UNNotificationSound.defaultCritical
+        content.interruptionLevel = .timeSensitive
+        
+        let request = UNNotificationRequest(identifier: "trip-\(Int(Date().timeIntervalSince1970))", content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request)
+        
+        // Segundo sonido después de 1 segundo
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            let content2 = UNMutableNotificationContent()
+            content2.title = "🚛 Revisa tu viaje"
+            content2.body = "📍 \(origin) → \(destination)"
+            content2.sound = UNNotificationSound.defaultCritical
+            
+            let request2 = UNNotificationRequest(identifier: "trip2-\(Int(Date().timeIntervalSince1970))", content: content2, trigger: nil)
+            UNUserNotificationCenter.current().add(request2)
         }
     }
     
