@@ -881,17 +881,37 @@ app.post('/api/alerts', async (req, res) => {
     conn = await pool.getConnection();
     const result = await conn.query('INSERT INTO alerts (device_id, alert_type, message, latitude, longitude, accuracy) VALUES (?, ?, ?, ?, ?, ?)',
       [deviceId, alert_type, message || '', latitude || null, longitude || null, accuracy || null]);
-    // Notificar por SMS al admin de la empresa
+    // Obtener info del dispositivo que envía la alerta
     const devices = await conn.query('SELECT d.*, c.contact_email, c.contact_phone FROM devices d JOIN companies c ON c.id=d.company_id WHERE d.id=?', [deviceId]);
     if (devices.length > 0) {
       const d = devices[0];
       const typeLabels = { accident:'ACCIDENTE', robbery:'ROBO/ASALTO', breakdown:'AVERIA', help:'AUXILIO' };
-      const alertMsg = '🚨 ALERTA ' + (typeLabels[alert_type]||alert_type) + ' - ' + (d.person_name||d.device_name) + (d.phone ? ' Tel:'+d.phone : '') + (latitude ? ' Maps:https://www.google.com/maps?q='+latitude+','+longitude : '');
+      const typeIcons = { accident:'🚗💥', robbery:'🔫🚨', breakdown:'🔧', help:'🆘' };
+      const alertLabel = typeLabels[alert_type] || alert_type;
+      const alertIcon = typeIcons[alert_type] || '🚨';
+      const senderName = d.person_name || d.device_name;
+      const mapsLink = latitude ? ' Maps:https://www.google.com/maps?q='+latitude+','+longitude : '';
+
+      // 1. Notificar por SMS al admin de la empresa
+      const alertMsg = '🚨 ALERTA ' + alertLabel + ' - ' + senderName + (d.phone ? ' Tel:'+d.phone : '') + mapsLink;
       console.log(alertMsg);
-      // Enviar SMS via Lambda si hay teléfono de contacto de la empresa
       if (d.contact_phone) {
         sendAlertSMS(d.contact_phone, alertMsg);
       }
+
+      // 2. Notificar por push a TODOS los compañeros de la misma empresa
+      const companyDevices = await conn.query("SELECT * FROM devices WHERE company_id=? AND id!=? AND endpoint != '' AND LENGTH(endpoint) > 0", [d.company_id, deviceId]);
+      const pushBody = alertIcon + ' ' + alertLabel + ' - ' + senderName + (d.vehicle ? ' (' + d.vehicle + ')' : '') + (message ? ': ' + message : '') + (latitude ? '\n📍 Ver ubicación' : '');
+      
+      for (const cd of companyDevices) {
+        try {
+          await webPush.sendNotification(
+            { endpoint: cd.endpoint, keys: { p256dh: cd.p256dh, auth: cd.auth } },
+            JSON.stringify({ type: 'custom-message', title: '🚨 EMERGENCIA - ' + senderName, body: pushBody })
+          );
+        } catch (e) { /* push falló para este dispositivo */ }
+      }
+      console.log('Alerta enviada a ' + companyDevices.length + ' compañeros');
     }
     res.json({ success: true, alertId: Number(result.insertId) });
   } catch (err) { res.status(500).json({ error: 'Error interno' }); }
