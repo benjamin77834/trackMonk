@@ -492,6 +492,7 @@ async function loadMyTrip() {
         if (!isDone) delHtml += '<button onclick="markDelivered('+d.id+','+t.id+')" style="padding:0.3rem 0.6rem;background:#22c55e;color:#fff;border:none;border-radius:6px;font-size:0.75rem;font-weight:600;cursor:pointer;">Entregar</button>';
         delHtml += '</div>';
         if (d.address) delHtml += '<div style="font-size:0.75rem;color:#666;margin-top:0.2rem;">📍 '+escapeHtml(d.address)+'</div>';
+        if (d.notes) delHtml += '<div style="font-size:0.75rem;color:#555;margin-top:0.2rem;">📝 '+escapeHtml(d.notes)+'</div>';
         if (isDone && d.delivered_at) delHtml += '<div style="font-size:0.7rem;color:#16a34a;margin-top:0.2rem;">Entregado: '+new Date(d.delivered_at).toLocaleString('es-MX',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+'</div>';
         delHtml += '</div>';
       });
