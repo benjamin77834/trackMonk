@@ -119,10 +119,79 @@ public class LocationService extends Service {
 
                 // Actualizar notificación
                 updateNotification("Última: " + new java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(new java.util.Date()));
+
+                // Revisar mensajes de chat y admin
+                checkMessages(deviceId);
             } catch (Exception e) {
                 Log.e(TAG, "Error sending location", e);
             }
         }).start();
+    }
+
+    private void checkMessages(String deviceId) {
+        try {
+            // Revisar chat de compañeros
+            URL chatUrl = new URL(API_BASE + "/api/driver-chat/" + deviceId + "/unread");
+            HttpURLConnection chatConn = (HttpURLConnection) chatUrl.openConnection();
+            chatConn.setConnectTimeout(10000);
+            chatConn.setReadTimeout(10000);
+            if (chatConn.getResponseCode() == 200) {
+                String response = readStream(chatConn.getInputStream());
+                org.json.JSONArray arr = new org.json.JSONArray(response);
+                int totalUnread = 0;
+                for (int i = 0; i < arr.length(); i++) {
+                    totalUnread += arr.getJSONObject(i).getInt("count");
+                }
+                if (totalUnread > 0) {
+                    showMessageNotification("💬 Chat", "Tienes " + totalUnread + " mensaje" + (totalUnread > 1 ? "s" : "") + " de compañeros", true);
+                }
+            }
+            chatConn.disconnect();
+
+            // Revisar mensajes del admin
+            URL msgUrl = new URL(API_BASE + "/api/my-messages/" + deviceId + "/unread");
+            HttpURLConnection msgConn = (HttpURLConnection) msgUrl.openConnection();
+            msgConn.setConnectTimeout(10000);
+            msgConn.setReadTimeout(10000);
+            if (msgConn.getResponseCode() == 200) {
+                String response = readStream(msgConn.getInputStream());
+                JSONObject obj = new JSONObject(response);
+                int count = obj.optInt("count", 0);
+                if (count > 0) {
+                    showMessageNotification("🐵 TrackMonk", "Tienes " + count + " mensaje" + (count > 1 ? "s" : "") + " del admin", false);
+                }
+            }
+            msgConn.disconnect();
+        } catch (Exception e) {
+            Log.e(TAG, "Error checking messages", e);
+        }
+    }
+
+    private String readStream(java.io.InputStream is) throws Exception {
+        java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(is));
+        StringBuilder sb = new StringBuilder();
+        String line;
+        while ((line = reader.readLine()) != null) sb.append(line);
+        reader.close();
+        return sb.toString();
+    }
+
+    private void showMessageNotification(String title, String text, boolean isChat) {
+        Intent intent = new Intent(this, MainActivity.class);
+        PendingIntent pi = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE);
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, "trackmonk_messages")
+            .setContentTitle(title)
+            .setContentText(text)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentIntent(pi)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setVibrate(new long[]{0, 500, 200, 500});
+
+        NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        nm.notify(isChat ? 2 : 3, builder.build());
     }
 
     private String getSavedDeviceId() {
