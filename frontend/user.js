@@ -511,13 +511,35 @@ function takePhoto(tripId) {
   input.onchange = function(e) {
     var file = e.target.files[0];
     if (!file) return;
+    updateStatus('Procesando foto...', 'warning');
     var reader = new FileReader();
     reader.onload = function(ev) {
-      uploadEvidence(tripId, 'photo', 'Foto de evidencia', ev.target.result);
+      // Redimensionar antes de subir
+      resizeAndUpload(tripId, ev.target.result);
     };
     reader.readAsDataURL(file);
   };
   input.click();
+}
+
+function resizeAndUpload(tripId, dataUrl) {
+  var img = new Image();
+  img.onload = function() {
+    var maxSize = 800;
+    var w = img.width, h = img.height;
+    if (w > maxSize || h > maxSize) {
+      var ratio = Math.min(maxSize / w, maxSize / h);
+      w = Math.round(w * ratio);
+      h = Math.round(h * ratio);
+    }
+    var canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    var ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, w, h);
+    var compressed = canvas.toDataURL('image/jpeg', 0.4);
+    uploadEvidence(tripId, 'photo', 'Foto de evidencia', compressed);
+  };
+  img.src = dataUrl;
 }
 
 function showSignaturePad(tripId) {
