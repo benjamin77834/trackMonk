@@ -101,7 +101,7 @@ class APIManager: ObservableObject {
         loadActiveTrip()
         loadChatContacts()
         loadChatUnread()
-        pollTimer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in
+        pollTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
             self?.checkMessages()
             self?.loadActiveTrip()
             self?.loadChatUnread()

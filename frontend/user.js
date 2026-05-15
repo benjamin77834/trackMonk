@@ -233,6 +233,7 @@ async function showRegistered() {
   loadChatUnread();
   setInterval(loadUnreadCount, 30000);
   setInterval(loadChatUnread, 30000);
+  setInterval(loadMyTrip, 60000);
 
   // Mostrar botón de descarga según plataforma
   var dlCard = document.getElementById('download-app-card');
