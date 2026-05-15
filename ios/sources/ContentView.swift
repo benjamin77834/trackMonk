@@ -117,8 +117,7 @@ struct ContentView: View {
                 if !location.isTracking {
                     location.startTracking()
                 }
-                api.checkMessages()
-                api.loadActiveTrip()
+                api.startPolling()
             }
         }
     }
