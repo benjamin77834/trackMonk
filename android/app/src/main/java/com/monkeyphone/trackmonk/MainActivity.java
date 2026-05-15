@@ -7,6 +7,7 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.webkit.GeolocationPermissions;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
@@ -40,21 +41,8 @@ public class MainActivity extends AppCompatActivity {
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageFinished(WebView view, String url) {
-                // Inyectar código para capturar el deviceId cuando se guarde en localStorage
-                view.evaluateJavascript(
-                    "(function() {" +
-                    "  var origSet = Storage.prototype.setItem;" +
-                    "  Storage.prototype.setItem = function(key, value) {" +
-                    "    origSet.call(this, key, value);" +
-                    "    if (key === 'deviceId' && window.TrackMonkBridge) {" +
-                    "      window.TrackMonkBridge.saveDeviceId(value);" +
-                    "    }" +
-                    "  };" +
-                    "  var existing = localStorage.getItem('deviceId');" +
-                    "  if (existing && window.TrackMonkBridge) {" +
-                    "    window.TrackMonkBridge.saveDeviceId(existing);" +
-                    "  }" +
-                    "})();", null);
+                // Inyectar código para capturar el deviceId
+                injectBridge(view);
             }
         });
 
@@ -78,9 +66,36 @@ public class MainActivity extends AppCompatActivity {
         public void saveDeviceId(String deviceId) {
             SharedPreferences prefs = getSharedPreferences("trackmonk", Context.MODE_PRIVATE);
             prefs.edit().putString("deviceId", deviceId).apply();
+            Log.d("TrackMonk", "DeviceId saved: " + deviceId);
             // Iniciar servicio si no está corriendo
             startLocationService();
         }
+    }
+
+    private void injectBridge(WebView view) {
+        view.evaluateJavascript(
+            "(function() {" +
+            "  var origSet = Storage.prototype.setItem;" +
+            "  Storage.prototype.setItem = function(key, value) {" +
+            "    origSet.call(this, key, value);" +
+            "    if (key === 'deviceId' && window.TrackMonkBridge) {" +
+            "      window.TrackMonkBridge.saveDeviceId(value);" +
+            "    }" +
+            "  };" +
+            "  var existing = localStorage.getItem('deviceId');" +
+            "  if (existing && window.TrackMonkBridge) {" +
+            "    window.TrackMonkBridge.saveDeviceId(existing);" +
+            "  }" +
+            "  // Reintentar cada 3 segundos por si el login es async" +
+            "  if (!window._trackMonkInterval) {" +
+            "    window._trackMonkInterval = setInterval(function() {" +
+            "      var id = localStorage.getItem('deviceId');" +
+            "      if (id && window.TrackMonkBridge) {" +
+            "        window.TrackMonkBridge.saveDeviceId(id);" +
+            "      }" +
+            "    }, 3000);" +
+            "  }" +
+            "})();", null);
     }
 
     private void requestPermissions() {
