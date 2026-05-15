@@ -1,0 +1,10 @@
+com.monkeyphone.trackmonk.app-androidbrowserhelper-2.5.0-0 /Users/benjamingarcia/.gradle/caches/transforms-3/86a8cc251eef6856f27f47d91d8569e5/transformed/androidbrowserhelper-2.5.0/res
+com.monkeyphone.trackmonk.app-core-1.1.0-1 /Users/benjamingarcia/.gradle/caches/transforms-3/dc3ccc3d6242c091a0cd62c50c18a66a/transformed/core-1.1.0/res
+com.monkeyphone.trackmonk.app-browser-1.7.0-2 /Users/benjamingarcia/.gradle/caches/transforms-3/eaa98e21d9e31bc703d7ca1f1e0921eb/transformed/browser-1.7.0/res
+com.monkeyphone.trackmonk.app-pngs-3 /Users/benjamingarcia/trackerMonk/android-twa/app/build/generated/res/pngs/debug
+com.monkeyphone.trackmonk.app-resValues-4 /Users/benjamingarcia/trackerMonk/android-twa/app/build/generated/res/resValues/debug
+com.monkeyphone.trackmonk.app-packageDebugResources-5 /Users/benjamingarcia/trackerMonk/android-twa/app/build/intermediates/incremental/debug/packageDebugResources/merged.dir
+com.monkeyphone.trackmonk.app-packageDebugResources-6 /Users/benjamingarcia/trackerMonk/android-twa/app/build/intermediates/incremental/debug/packageDebugResources/stripped.dir
+com.monkeyphone.trackmonk.app-merged_res-7 /Users/benjamingarcia/trackerMonk/android-twa/app/build/intermediates/merged_res/debug
+com.monkeyphone.trackmonk.app-debug-8 /Users/benjamingarcia/trackerMonk/android-twa/app/src/debug/res
+com.monkeyphone.trackmonk.app-main-9 /Users/benjamingarcia/trackerMonk/android-twa/app/src/main/res

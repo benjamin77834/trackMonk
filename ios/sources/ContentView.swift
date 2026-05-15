@@ -112,7 +112,13 @@ struct ContentView: View {
             .sheet(isPresented: $showEmergency) {
                 EmergencySheet(api: api, location: location, show: $showEmergency)
             }
-            .onAppear { api.checkMessages(); api.loadActiveTrip() }
+            .onAppear {
+                if !location.isTracking {
+                    location.startTracking()
+                }
+                api.checkMessages()
+                api.loadActiveTrip()
+            }
         }
     }
     

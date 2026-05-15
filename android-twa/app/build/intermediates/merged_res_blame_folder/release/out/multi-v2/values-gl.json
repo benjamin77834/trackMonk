@@ -1,0 +1,36 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.monkeyphone.trackmonk.app-mergeReleaseResources-5:/values-gl/values-gl.xml",
+            "map": [
+                {
+                    "source": "/Users/benjamingarcia/.gradle/caches/transforms-3/eaa98e21d9e31bc703d7ca1f1e0921eb/transformed/browser-1.7.0/res/values-gl/values-gl.xml",
+                    "from": {
+                        "startLines": "2,3,4,5",
+                        "startColumns": "4,4,4,4",
+                        "startOffsets": "55,162,264,376",
+                        "endColumns": "106,101,111,105",
+                        "endOffsets": "157,259,371,477"
+                    }
+                },
+                {
+                    "source": "/Users/benjamingarcia/.gradle/caches/transforms-3/dc3ccc3d6242c091a0cd62c50c18a66a/transformed/core-1.1.0/res/values-gl/values-gl.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "100",
+                        "endOffsets": "151"
+                    },
+                    "to": {
+                        "startLines": "6",
+                        "startColumns": "4",
+                        "startOffsets": "482",
+                        "endColumns": "100",
+                        "endOffsets": "578"
+                    }
+                }
+            ]
+        }
+    ]
+}

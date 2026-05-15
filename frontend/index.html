@@ -137,6 +137,31 @@
           <p id="install-app-hint" style="font-size:0.8rem;color:#888;margin-top:0.5rem;"></p>
         </div>
 
+        <!-- Descargar app nativa -->
+        <div id="download-app-card" style="margin-top:1rem;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:1rem;text-align:center;">
+          <p style="font-size:0.95rem;color:#333;margin-bottom:0.5rem;">📲 <strong>Instala la app para mejor tracking</strong></p>
+          <p style="font-size:0.8rem;color:#666;margin-bottom:0.75rem;">La app envía tu ubicación en segundo plano sin necesidad de tener el navegador abierto.</p>
+          <a href="/trackmonk.apk" download id="download-apk-btn" style="display:none;width:100%;padding:0.7rem;background:#22c55e;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;text-decoration:none;font-size:0.9rem;">🤖 Descargar para Android</a>
+          <div id="install-instructions" style="display:none;margin-top:0.75rem;text-align:left;font-size:0.8rem;color:#555;">
+            <p style="font-weight:600;margin-bottom:0.3rem;">Instrucciones:</p>
+            <ol style="margin:0;padding-left:1.2rem;">
+              <li>Toca "Descargar para Android"</li>
+              <li>Abre el archivo descargado</li>
+              <li>Si pide permiso, activa "Instalar de fuentes desconocidas"</li>
+              <li>Toca "Instalar"</li>
+              <li>Abre TrackMonk e inicia sesión</li>
+            </ol>
+          </div>
+          <div id="ios-install-instructions" style="display:none;margin-top:0.5rem;text-align:left;font-size:0.8rem;color:#555;">
+            <p style="font-weight:600;margin-bottom:0.3rem;">Para iPhone:</p>
+            <ol style="margin:0;padding-left:1.2rem;">
+              <li>Abre esta página en <strong>Safari</strong></li>
+              <li>Toca Compartir (📤) abajo</li>
+              <li>Toca "Agregar a pantalla de inicio"</li>
+            </ol>
+          </div>
+        </div>
+
         <div style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid #e0e0e0;display:flex;gap:0.5rem;justify-content:center;">
           <button onclick="resetDevice()" class="btn btn-small">🔄 Re-registrar</button>
           <button onclick="driverLogout()" class="btn btn-small">🚪 Cerrar sesión</button>
