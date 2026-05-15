@@ -1240,6 +1240,20 @@ app.get('/api/driver-chat/contacts/:deviceId', async (req, res) => {
   finally { if (conn) conn.release(); }
 });
 
+// Mensajes no leídos del chat entre conductores (DEBE ir antes de /:deviceId/:otherDeviceId)
+app.get('/api/driver-chat/:deviceId/unread', async (req, res) => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const rows = await conn.query(
+      'SELECT from_device_id, COUNT(*) as count FROM driver_messages WHERE to_device_id=? AND is_read=0 GROUP BY from_device_id',
+      [req.params.deviceId]
+    );
+    res.json(rows);
+  } catch (err) { res.status(500).json({ error: 'Error interno' }); }
+  finally { if (conn) conn.release(); }
+});
+
 // Obtener conversación entre dos conductores
 app.get('/api/driver-chat/:deviceId/:otherDeviceId', async (req, res) => {
   let conn;
@@ -1288,20 +1302,6 @@ app.post('/api/driver-chat/:deviceId/:otherDeviceId', async (req, res) => {
     }
 
     res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: 'Error interno' }); }
-  finally { if (conn) conn.release(); }
-});
-
-// Mensajes no leídos del chat entre conductores
-app.get('/api/driver-chat/:deviceId/unread', async (req, res) => {
-  let conn;
-  try {
-    conn = await pool.getConnection();
-    const rows = await conn.query(
-      'SELECT from_device_id, COUNT(*) as count FROM driver_messages WHERE to_device_id=? AND is_read=0 GROUP BY from_device_id',
-      [req.params.deviceId]
-    );
-    res.json(rows);
   } catch (err) { res.status(500).json({ error: 'Error interno' }); }
   finally { if (conn) conn.release(); }
 });
