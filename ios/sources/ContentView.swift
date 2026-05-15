@@ -427,15 +427,30 @@ struct TripSection: View {
     func uploadPhoto() {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             guard let tripId = self.api.activeTrip?["id"] as? Int,
-                  let image = self.capturedImage,
-                  let data = image.jpegData(compressionQuality: 0.5) else {
+                  let image = self.capturedImage else {
                 print("uploadPhoto failed: tripId=\(self.api.activeTrip?["id"] ?? "nil"), image=\(self.capturedImage != nil)")
                 return
             }
+            // Redimensionar imagen a máximo 800px y comprimir
+            let resized = self.resizeImage(image, maxSize: 800)
+            guard let data = resized.jpegData(compressionQuality: 0.3) else { return }
+            print("uploadPhoto: size=\(data.count) bytes")
             let base64 = "data:image/jpeg;base64," + data.base64EncodedString()
             self.api.uploadEvidence(tripId: tripId, type: "photo", description: "Foto desde iPhone", imageData: base64)
             self.capturedImage = nil
         }
+    }
+    
+    func resizeImage(_ image: UIImage, maxSize: CGFloat) -> UIImage {
+        let size = image.size
+        let ratio = min(maxSize / size.width, maxSize / size.height)
+        if ratio >= 1 { return image }
+        let newSize = CGSize(width: size.width * ratio, height: size.height * ratio)
+        UIGraphicsBeginImageContextWithOptions(newSize, false, 1.0)
+        image.draw(in: CGRect(origin: .zero, size: newSize))
+        let resized = UIGraphicsGetImageFromCurrentImageContext() ?? image
+        UIGraphicsEndImageContext()
+        return resized
     }
     
     func uploadSignature(_ image: UIImage) {
