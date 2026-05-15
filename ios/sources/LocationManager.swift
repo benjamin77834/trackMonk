@@ -116,9 +116,14 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         
         // Revisar mensajes nuevos
         APIManager.shared.checkMessages()
+        APIManager.shared.loadChatUnread()
         DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
             if APIManager.shared.unreadCount > 0 {
                 self.showLocalNotification(count: APIManager.shared.unreadCount)
+            }
+            let chatTotal = APIManager.shared.chatUnread.values.reduce(0, +)
+            if chatTotal > 0 {
+                self.showChatNotification(count: chatTotal)
             }
         }
     }
@@ -140,6 +145,18 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         content.badge = NSNumber(value: count)
         
         let request = UNNotificationRequest(identifier: "msg-\(Int(Date().timeIntervalSince1970))", content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request)
+    }
+    
+    private func showChatNotification(count: Int) {
+        let content = UNMutableNotificationContent()
+        content.title = "💬 Chat de compañeros"
+        content.body = "Tienes \(count) mensaje\(count > 1 ? "s" : "") de tus compañeros"
+        content.sound = UNNotificationSound.defaultCritical
+        content.interruptionLevel = .timeSensitive
+        content.badge = NSNumber(value: count)
+        
+        let request = UNNotificationRequest(identifier: "chat-\(Int(Date().timeIntervalSince1970))", content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request)
     }
 }
