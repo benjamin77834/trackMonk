@@ -116,6 +116,12 @@
         </button>
         <div id="driver-chat" style="display:none;margin-top:0.75rem;text-align:left;"></div>
 
+        <!-- Notificaciones -->
+        <button onclick="viewMyMessages()" style="width:100%;margin-top:0.5rem;padding:0.85rem;background:#f59e0b;color:#fff;border:none;border-radius:12px;font-size:1rem;font-weight:700;cursor:pointer;">
+          🔔 Notificaciones <span id="unread-badge" style="display:none;background:#fff;color:#f59e0b;font-size:0.75rem;padding:0.1rem 0.5rem;border-radius:10px;margin-left:0.5rem;"></span>
+        </button>
+        <div id="my-messages" style="display:none;margin-top:0.75rem;text-align:left;"></div>
+
         <!-- Emergencia -->
         <button onclick="showEmergencyPanel()" style="width:100%;margin-top:0.75rem;padding:1rem;background:#ef4444;color:#fff;border:none;border-radius:12px;font-size:1.1rem;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(239,68,68,0.3);">
           🚨 EMERGENCIA
@@ -125,14 +131,10 @@
         <button id="activate-push-btn" onclick="activatePush()" class="btn btn-primary" style="margin-top:0.5rem;background:#3b82f6;display:none;">🔔 Activar notificaciones push</button>
 
         <div style="display:flex;gap:0.5rem;margin-top:0.75rem;">
-          <button onclick="viewMyMessages()" class="btn btn-history" style="flex:1;">
-            🔔 Notificaciones <span id="unread-badge" style="display:none;background:#ef4444;color:#fff;font-size:0.7rem;padding:0.1rem 0.4rem;border-radius:10px;margin-left:0.3rem;"></span>
-          </button>
           <button onclick="viewMyHistory()" class="btn btn-history" style="flex:1;">📋 Historial</button>
         </div>
 
         <div id="my-trip" style="display:none;margin-top:1rem;text-align:left;"></div>
-        <div id="my-messages" style="display:none;margin-top:1rem;text-align:left;"></div>
         <p id="last-sent" style="color:#999;font-size:0.8rem;margin-top:0.5rem;"></p>
         <div id="my-history" style="display:none;margin-top:1rem;text-align:left;"></div>
 
