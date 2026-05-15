@@ -505,14 +505,129 @@ async function loadMyTrip() {
 }
 
 async function markDelivered(deliveryId, tripId) {
-  if (!confirm('¿Marcar como entregado?')) return;
-  updateStatus('Marcando entrega...', 'warning');
+  if (!confirm('¿Marcar como entregado? Se pedirá foto y firma.')) return;
+  // Guardar el deliveryId para usarlo después
+  window._currentDeliveryId = deliveryId;
+  window._currentDeliveryTripId = tripId;
+  // Pedir foto primero
+  takeDeliveryPhoto(deliveryId, tripId);
+}
+
+function takeDeliveryPhoto(deliveryId, tripId) {
+  var input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.capture = 'environment';
+  input.onchange = function(e) {
+    var file = e.target.files[0];
+    if (!file) { showDeliverySignature(deliveryId, tripId, null); return; }
+    updateStatus('Procesando foto...', 'warning');
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      // Redimensionar
+      var img = new Image();
+      img.onload = function() {
+        var maxSize = 800;
+        var w = img.width, h = img.height;
+        if (w > maxSize || h > maxSize) { var ratio = Math.min(maxSize/w, maxSize/h); w = Math.round(w*ratio); h = Math.round(h*ratio); }
+        var canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        var photoData = canvas.toDataURL('image/jpeg', 0.4);
+        // Subir foto y luego pedir firma
+        uploadDeliveryEvidence(tripId, 'photo', 'Entrega #'+deliveryId, photoData, function(photoUrl) {
+          showDeliverySignature(deliveryId, tripId, photoUrl);
+        });
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+  input.click();
+}
+
+function showDeliverySignature(deliveryId, tripId, photoUrl) {
+  window._deliveryPhotoUrl = photoUrl;
+  var c = document.getElementById('my-trip');
+  var sigHtml = '<div id="delivery-sig-panel" style="margin-top:0.75rem;background:#fff;border:2px solid #3b82f6;border-radius:12px;padding:1rem;text-align:center;">' +
+    '<h3 style="color:#3b82f6;margin-bottom:0.5rem;">✍️ Firma de quien recibe</h3>' +
+    '<canvas id="del-sig-canvas" width="300" height="150" style="border:1px solid #ddd;border-radius:8px;touch-action:none;width:100%;"></canvas>' +
+    '<div style="margin-top:0.5rem;display:flex;gap:0.5rem;">' +
+      '<button onclick="clearDelSignature()" style="flex:1;padding:0.5rem;background:#f0f0f0;border:none;border-radius:8px;cursor:pointer;">Borrar</button>' +
+      '<button onclick="saveDeliverySignature('+deliveryId+','+tripId+')" style="flex:1;padding:0.5rem;background:#22c55e;color:#fff;border:none;border-radius:8px;cursor:pointer;">Confirmar entrega</button>' +
+    '</div>' +
+    '<button onclick="skipDeliverySignature('+deliveryId+','+tripId+')" style="width:100%;margin-top:0.5rem;padding:0.5rem;background:#f0f0f0;border:none;border-radius:8px;color:#666;cursor:pointer;">Omitir firma</button>' +
+  '</div>';
+  c.insertAdjacentHTML('beforeend', sigHtml);
+  setTimeout(function() {
+    var canvas = document.getElementById('del-sig-canvas');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    var drawing = false;
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+    function getPos(e) { var rect = canvas.getBoundingClientRect(); var touch = e.touches ? e.touches[0] : e; return { x: touch.clientX - rect.left, y: touch.clientY - rect.top }; }
+    canvas.addEventListener('mousedown', function(e) { drawing = true; var p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); });
+    canvas.addEventListener('mousemove', function(e) { if (!drawing) return; var p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); });
+    canvas.addEventListener('mouseup', function() { drawing = false; });
+    canvas.addEventListener('touchstart', function(e) { e.preventDefault(); drawing = true; var p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); });
+    canvas.addEventListener('touchmove', function(e) { e.preventDefault(); if (!drawing) return; var p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); });
+    canvas.addEventListener('touchend', function() { drawing = false; });
+  }, 100);
+}
+
+function clearDelSignature() {
+  var canvas = document.getElementById('del-sig-canvas');
+  if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+}
+
+async function saveDeliverySignature(deliveryId, tripId) {
+  var canvas = document.getElementById('del-sig-canvas');
+  var sigData = canvas ? canvas.toDataURL('image/png') : null;
+  var sigUrl = null;
+  if (sigData && sigData.length > 1000) {
+    // Subir firma
+    sigUrl = await uploadDeliveryEvidenceAsync(tripId, 'signature', 'Firma entrega #'+deliveryId, sigData);
+  }
+  // Marcar como entregado
   await fetch(API_BASE + '/api/deliveries/' + deliveryId + '/complete', {
     method: 'PUT', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({}),
+    body: JSON.stringify({ signature_url: sigUrl || '', photo_url: window._deliveryPhotoUrl || '' }),
   });
-  updateStatus('✅ Entregado', 'success');
+  var panel = document.getElementById('delivery-sig-panel');
+  if (panel) panel.remove();
+  updateStatus('✅ Entrega confirmada', 'success');
   loadMyTrip();
+}
+
+async function skipDeliverySignature(deliveryId, tripId) {
+  await fetch(API_BASE + '/api/deliveries/' + deliveryId + '/complete', {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ signature_url: '', photo_url: window._deliveryPhotoUrl || '' }),
+  });
+  var panel = document.getElementById('delivery-sig-panel');
+  if (panel) panel.remove();
+  updateStatus('✅ Entrega confirmada', 'success');
+  loadMyTrip();
+}
+
+function uploadDeliveryEvidence(tripId, type, description, imageData, callback) {
+  fetch(API_BASE + '/api/my-trips/' + tripId + '/evidence', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ deviceId: deviceId, type: type, description: description, image_data: imageData }),
+  }).then(function(r) { return r.json(); }).then(function(data) {
+    callback(data.url || '');
+  }).catch(function() { callback(''); });
+}
+
+async function uploadDeliveryEvidenceAsync(tripId, type, description, imageData) {
+  try {
+    var res = await fetch(API_BASE + '/api/my-trips/' + tripId + '/evidence', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deviceId: deviceId, type: type, description: description, image_data: imageData }),
+    });
+    var data = await res.json();
+    return data.url || '';
+  } catch(e) { return ''; }
 }
 async function addMyTripCost(tripId) {
   var type = document.getElementById('cost-type').value;

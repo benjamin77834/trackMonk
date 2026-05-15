@@ -12,6 +12,7 @@ class APIManager: ObservableObject {
     @Published var unreadCount = 0
     @Published var activeTrip: [String: Any]? = nil
     @Published var tripCosts: [[String: Any]] = []
+    @Published var tripDeliveries: [[String: Any]] = []
     
     var deviceId: String { UserDefaults.standard.string(forKey: "deviceId") ?? "" }
     private var userId = ""
@@ -183,6 +184,30 @@ class APIManager: ObservableObject {
             guard let data = data,
                   let arr = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return }
             DispatchQueue.main.async { self.tripCosts = arr }
+        }.resume()
+        loadTripDeliveries(tripId: tripId)
+    }
+    
+    func loadTripDeliveries(tripId: Int) {
+        guard let url = URL(string: base + "/api/trips/\(tripId)/deliveries") else { return }
+        URLSession.shared.dataTask(with: url) { data, _, _ in
+            guard let data = data,
+                  let arr = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else { return }
+            DispatchQueue.main.async { self.tripDeliveries = arr }
+        }.resume()
+    }
+    
+    func markDeliveryComplete(deliveryId: Int, completion: @escaping (Bool) -> Void) {
+        guard let url = URL(string: base + "/api/deliveries/\(deliveryId)/complete") else { completion(false); return }
+        var req = URLRequest(url: url)
+        req.httpMethod = "PUT"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try? JSONSerialization.data(withJSONObject: ["signature_url": "", "photo_url": ""])
+        URLSession.shared.dataTask(with: req) { data, _, _ in
+            guard let data = data,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { completion(false); return }
+            let ok = json["success"] as? Bool ?? false
+            DispatchQueue.main.async { completion(ok) }
         }.resume()
     }
     

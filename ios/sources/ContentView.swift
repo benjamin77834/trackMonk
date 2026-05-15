@@ -324,6 +324,44 @@ struct TripSection: View {
                     Text("📦 \(cargo)").font(.caption).foregroundColor(.secondary)
                 }
                 
+                // Entregas
+                if !api.tripDeliveries.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        let done = api.tripDeliveries.filter { ($0["status"] as? String) == "delivered" }.count
+                        Text("📦 Entregas (\(done)/\(api.tripDeliveries.count))").font(.subheadline).bold()
+                        
+                        ForEach(api.tripDeliveries.indices, id: \.self) { i in
+                            let d = api.tripDeliveries[i]
+                            let isDone = (d["status"] as? String) == "delivered"
+                            let dId = d["id"] as? Int ?? 0
+                            
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("\(isDone ? "✅" : "⏳") \(d["name"] as? String ?? "")")
+                                        .font(.caption).bold()
+                                    if let addr = d["address"] as? String, !addr.isEmpty {
+                                        Text("📍 \(addr)").font(.caption2).foregroundColor(.secondary)
+                                    }
+                                }
+                                Spacer()
+                                if !isDone {
+                                    Button("Entregar") {
+                                        markDeliveryDone(dId)
+                                    }
+                                    .font(.caption2).bold()
+                                    .padding(.horizontal, 8).padding(.vertical, 4)
+                                    .background(Color.green).foregroundColor(.white)
+                                    .cornerRadius(6)
+                                }
+                            }
+                            .padding(.vertical, 4)
+                            .padding(.horizontal, 8)
+                            .background(isDone ? Color.green.opacity(0.05) : Color.yellow.opacity(0.1))
+                            .cornerRadius(8)
+                        }
+                    }
+                }
+                
                 // Total cost
                 let total = api.tripCosts.reduce(0.0) { $0 + (Double("\($1["amount"] ?? 0)") ?? 0) }
                 Text("$\(total, specifier: "%.2f")")
@@ -422,6 +460,16 @@ struct TripSection: View {
     func completeTrip() {
         guard let tripId = api.activeTrip?["id"] as? Int else { return }
         api.completeMyTrip(tripId: tripId) { _ in }
+    }
+    
+    func markDeliveryDone(_ deliveryId: Int) {
+        api.markDeliveryComplete(deliveryId: deliveryId) { ok in
+            if ok {
+                if let tripId = self.api.activeTrip?["id"] as? Int {
+                    self.api.loadTripDeliveries(tripId: tripId)
+                }
+            }
+        }
     }
     
     func uploadPhoto() {
