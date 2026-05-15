@@ -87,17 +87,15 @@ struct ContentView: View {
                     // Chat con compañeros
                     DriverChatSection(api: api)
                     
+                    // Mensajes del admin
+                    MessagesSection(api: api)
+                    
                     // Emergencia
                     Button(action: { showEmergency = true }) {
                         Label("EMERGENCIA", systemImage: "exclamationmark.triangle.fill")
                             .frame(maxWidth: .infinity).padding()
                             .background(Color.red).foregroundColor(.white)
                             .cornerRadius(12).bold().font(.title3)
-                    }
-                    
-                    // Mensajes
-                    if api.unreadCount > 0 || !api.messages.isEmpty {
-                        MessagesSection(api: api)
                     }
                     
                     // Viaje activo
