@@ -629,6 +629,22 @@ async function viewTrip(tripId) {
     costsHtml += '</table>';
   } else { costsHtml = '<p style="color:#999;text-align:center;padding:1rem;">Sin gastos</p>'; }
 
+  // Cargar evidencias
+  var evidenceHtml = '';
+  try {
+    var evRes = await af(API_BASE + '/api/trips/' + tripId + '/evidence');
+    var evidence = await evRes.json();
+    if (evidence && evidence.length) {
+      evidenceHtml = '<div style="margin-top:1rem;padding-top:0.75rem;border-top:1px solid #e0e0e0;"><div style="font-size:0.85rem;font-weight:600;margin-bottom:0.5rem;">📷 Evidencias (' + evidence.length + ')</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">';
+      evidence.forEach(function(ev) {
+        var icon = ev.type === 'signature' ? '✍️' : '📷';
+        var label = ev.type === 'signature' ? 'Firma' : 'Foto';
+        evidenceHtml += '<div style="border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;"><img src="' + ev.image_url + '" style="width:100%;height:120px;object-fit:cover;cursor:pointer;" onclick="window.open(\'' + ev.image_url + '\',\'_blank\')"><div style="padding:0.4rem;font-size:0.75rem;color:#666;">' + icon + ' ' + label + (ev.description ? ' - ' + esc(ev.description) : '') + '<br>' + new Date(ev.created_at).toLocaleString('es-MX',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) + '</div></div>';
+      });
+      evidenceHtml += '</div></div>';
+    }
+  } catch(e) {}
+
   showDetail(
     '<h3>📋 Viaje #' + t.id + '</h3>' +
     '<div class="card-meta">👤 ' + esc(t.person_name || t.device_name) + (t.vehicle ? ' · 🚗 ' + esc(t.vehicle) : '') + '</div>' +
@@ -640,6 +656,7 @@ async function viewTrip(tripId) {
       '<div style="font-size:2rem;font-weight:800;color:#111;">$' + parseFloat(t.total_cost||0).toLocaleString('es-MX',{minimumFractionDigits:2}) + '</div>' +
       '<div style="font-size:0.75rem;color:#666;">' + (t.costs?t.costs.length:0) + ' gastos · ' + (t.locations?t.locations.length:0) + ' ubicaciones</div></div>' +
     costsHtml +
+    evidenceHtml +
     '<div style="margin-top:0.75rem;display:flex;gap:0.5rem;flex-wrap:wrap;">' +
       '<button onclick="exportTripCosts(' + tripId + ')" class="btn btn-secondary btn-sm" style="flex:1;">📥 Gastos CSV</button>' +
       '<button onclick="exportTripFull(' + tripId + ')" class="btn btn-secondary btn-sm" style="flex:1;">📥 Reporte</button></div>' +
