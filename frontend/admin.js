@@ -329,6 +329,36 @@ async function doSendMessage(deviceId) {
   else updateStatus('Error: ' + (data.error || ''), 'error');
 }
 
+function broadcastMessage() {
+  showDetail(
+    '<h3>📢 Mensaje a todos los operadores</h3>' +
+    '<p class="card-meta">Se enviará a todos los dispositivos de tu empresa</p>' +
+    '<div class="form-group"><label>Título</label><input id="bc-title" value="TrackMonk"></div>' +
+    '<div class="form-group"><label>Mensaje</label><textarea id="bc-body" placeholder="Escribe el mensaje..." rows="3" style="width:100%;padding:0.5rem;border:1px solid #e0e0e0;border-radius:8px;"></textarea></div>' +
+    '<button onclick="doBroadcast()" class="btn btn-accent2" style="width:100%;margin-top:0.5rem;">📢 Enviar a todos</button>'
+  );
+}
+
+async function doBroadcast() {
+  var title = document.getElementById('bc-title').value.trim() || 'TrackMonk';
+  var body = document.getElementById('bc-body').value.trim();
+  if (!body) { updateStatus('Escribe un mensaje', 'error'); return; }
+  updateStatus('Enviando a todos...', 'warning');
+  var sent = 0, failed = 0;
+  for (var i = 0; i < allDevices.length; i++) {
+    try {
+      var res = await af(API_BASE + '/api/push-message/' + allDevices[i].id, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: title, body: body }),
+      });
+      var data = await res.json();
+      if (data.success) sent++; else failed++;
+    } catch(e) { failed++; }
+  }
+  closeDetailDirect();
+  updateStatus('📢 Enviado a ' + sent + ' dispositivos' + (failed ? ' (' + failed + ' fallidos)' : ''), 'success');
+}
+
 function exportDevices() {
   var csv = 'ID,Nombre,Persona,Teléfono,Vehículo,Empresa,Registrado\n';
   allDevices.forEach(function(d) {
