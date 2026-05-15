@@ -1153,7 +1153,7 @@ app.post('/api/my-trips/:tripId/evidence', async (req, res) => {
     const s3Url = 'https://trackmonk-evidence.s3.amazonaws.com/' + filename;
     
     await new Promise(function(resolve, reject) {
-      exec('aws s3 cp ' + tmpFile + ' s3://trackmonk-evidence/' + filename + ' --acl public-read --content-type image/png', function(err) {
+      exec('aws s3 cp ' + tmpFile + ' s3://trackmonk-evidence/' + filename + ' --content-type image/png', function(err) {
         fs.unlinkSync(tmpFile);
         if (err) reject(err); else resolve();
       });
