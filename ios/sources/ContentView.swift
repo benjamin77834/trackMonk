@@ -425,12 +425,17 @@ struct TripSection: View {
     }
     
     func uploadPhoto() {
-        guard let tripId = api.activeTrip?["id"] as? Int,
-              let image = capturedImage,
-              let data = image.jpegData(compressionQuality: 0.5) else { return }
-        let base64 = "data:image/jpeg;base64," + data.base64EncodedString()
-        api.uploadEvidence(tripId: tripId, type: "photo", description: "Foto desde iPhone", imageData: base64)
-        capturedImage = nil
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            guard let tripId = self.api.activeTrip?["id"] as? Int,
+                  let image = self.capturedImage,
+                  let data = image.jpegData(compressionQuality: 0.5) else {
+                print("uploadPhoto failed: tripId=\(self.api.activeTrip?["id"] ?? "nil"), image=\(self.capturedImage != nil)")
+                return
+            }
+            let base64 = "data:image/jpeg;base64," + data.base64EncodedString()
+            self.api.uploadEvidence(tripId: tripId, type: "photo", description: "Foto desde iPhone", imageData: base64)
+            self.capturedImage = nil
+        }
     }
     
     func uploadSignature(_ image: UIImage) {
