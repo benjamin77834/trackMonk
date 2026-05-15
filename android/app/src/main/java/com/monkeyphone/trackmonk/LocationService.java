@@ -152,10 +152,19 @@ public class LocationService extends Service {
 
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= 26) {
+            // Canal para tracking (silencioso)
             NotificationChannel channel = new NotificationChannel(CHANNEL_ID, "Tracking GPS", NotificationManager.IMPORTANCE_LOW);
             channel.setDescription("Envío de ubicación en segundo plano");
+            
+            // Canal para mensajes (sonido fuerte)
+            NotificationChannel msgChannel = new NotificationChannel("trackmonk_messages", "Mensajes", NotificationManager.IMPORTANCE_HIGH);
+            msgChannel.setDescription("Mensajes de tu empresa");
+            msgChannel.enableVibration(true);
+            msgChannel.setVibrationPattern(new long[]{0, 500, 200, 500});
+            
             NotificationManager nm = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
             nm.createNotificationChannel(channel);
+            nm.createNotificationChannel(msgChannel);
         }
     }
 
