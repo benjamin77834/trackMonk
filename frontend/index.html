@@ -110,6 +110,9 @@
 
         <button onclick="sendMyLocation()" class="btn btn-primary" style="margin-top:1rem;">📍 Enviar mi ubicación ahora</button>
 
+        <!-- Viaje activo -->
+        <div id="my-trip" style="display:none;margin-top:0.75rem;text-align:left;"></div>
+
         <!-- Chat con compañeros -->
         <button onclick="openDriverChat()" style="width:100%;margin-top:0.75rem;padding:0.85rem;background:#3b82f6;color:#fff;border:none;border-radius:12px;font-size:1rem;font-weight:700;cursor:pointer;">
           💬 Chat con compañeros <span id="chat-badge" style="display:none;background:#fff;color:#3b82f6;font-size:0.75rem;padding:0.1rem 0.5rem;border-radius:10px;margin-left:0.5rem;"></span>
@@ -134,7 +137,6 @@
           <button onclick="viewMyHistory()" class="btn btn-history" style="flex:1;">📋 Historial</button>
         </div>
 
-        <div id="my-trip" style="display:none;margin-top:1rem;text-align:left;"></div>
         <p id="last-sent" style="color:#999;font-size:0.8rem;margin-top:0.5rem;"></p>
         <div id="my-history" style="display:none;margin-top:1rem;text-align:left;"></div>
 

@@ -989,6 +989,18 @@ app.post('/api/trips', auth, async (req, res) => {
   try {
     conn = await pool.getConnection();
     const r = await conn.query('INSERT INTO trips (device_id, origin, destination, cargo, notes) VALUES (?, ?, ?, ?, ?)', [device_id, origin, destination, cargo||'', notes||'']);
+    
+    // Notificar al conductor por push
+    const device = await conn.query('SELECT * FROM devices WHERE id=?', [device_id]);
+    if (device.length && device[0].endpoint && device[0].endpoint.length > 0) {
+      try {
+        await webPush.sendNotification(
+          { endpoint: device[0].endpoint, keys: { p256dh: device[0].p256dh, auth: device[0].auth } },
+          JSON.stringify({ type: 'custom-message', title: '🚛 Nuevo viaje asignado', body: '📍 ' + origin + ' → ' + destination + (cargo ? '\n📦 ' + cargo : '') })
+        );
+      } catch (e) { /* push falló */ }
+    }
+    
     res.json({ success: true, tripId: Number(r.insertId) });
   } catch (err) { res.status(500).json({ error: 'Error interno' }); }
   finally { if (conn) conn.release(); }
