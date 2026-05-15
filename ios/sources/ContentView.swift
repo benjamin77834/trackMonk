@@ -84,6 +84,9 @@ struct ContentView: View {
                             .cornerRadius(12).bold()
                     }
                     
+                    // Chat con compañeros
+                    DriverChatSection(api: api)
+                    
                     // Emergencia
                     Button(action: { showEmergency = true }) {
                         Label("EMERGENCIA", systemImage: "exclamationmark.triangle.fill")
@@ -96,9 +99,6 @@ struct ContentView: View {
                     if api.unreadCount > 0 || !api.messages.isEmpty {
                         MessagesSection(api: api)
                     }
-                    
-                    // Chat con compañeros
-                    DriverChatSection(api: api)
                     
                     // Viaje activo
                     if api.activeTrip != nil {
