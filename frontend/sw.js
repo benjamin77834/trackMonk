@@ -63,11 +63,18 @@ self.addEventListener('push', function(event) {
   }
 
   if (data.type === 'custom-message') {
+    // Determinar si es emergencia o chat para sonido fuerte
+    var isEmergency = (data.title || '').indexOf('EMERGENCIA') !== -1 || (data.title || '').indexOf('🚨') !== -1;
+    var isChat = (data.title || '').indexOf('💬') !== -1;
+    
     event.waitUntil(
       self.registration.showNotification(data.title || 'TrackMonk', {
         body: data.body || '',
         icon: '/icons/icon-192.png',
-        tag: 'custom-message',
+        tag: isEmergency ? 'emergency-' + Date.now() : (isChat ? 'chat-' + Date.now() : 'custom-message'),
+        requireInteraction: isEmergency,
+        vibrate: isEmergency ? [500, 200, 500, 200, 500] : [300, 100, 300],
+        silent: false,
       })
     );
   }
