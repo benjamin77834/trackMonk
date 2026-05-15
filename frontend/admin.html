@@ -133,10 +133,12 @@
           <button onclick="showNewTripForm()" class="btn btn-primary">➕ Nuevo viaje</button>
           <select id="trip-filter" onchange="loadTrips()" class="select-filter">
             <option value="">Todos</option>
-            <option value="active">Activos</option>
-            <option value="completed">Completados</option>
-            <option value="cancelled">Cancelados</option>
+            <option value="active">🟢 En progreso</option>
+            <option value="completed">✅ Cerrados</option>
+            <option value="cancelled">❌ Cancelados</option>
           </select>
+          <input type="date" id="trip-date-from" onchange="loadTrips()" style="padding:0.4rem;border:1px solid #e0e0e0;border-radius:6px;font-size:0.8rem;">
+          <input type="date" id="trip-date-to" onchange="loadTrips()" style="padding:0.4rem;border:1px solid #e0e0e0;border-radius:6px;font-size:0.8rem;">
           <button onclick="loadTrips()" class="btn btn-secondary">🔄</button>
         </div>
         <div id="trips-list"></div>

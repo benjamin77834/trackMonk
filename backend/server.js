@@ -1007,7 +1007,7 @@ app.post('/api/trips', auth, async (req, res) => {
 });
 
 app.get('/api/trips', auth, async (req, res) => {
-  const { status, device_id } = req.query;
+  const { status, device_id, from, to } = req.query;
   const cf = companyFilter(req);
   let conn;
   try {
@@ -1016,8 +1016,10 @@ app.get('/api/trips', auth, async (req, res) => {
     const params = [];
     if (status) { sql += ' AND t.status=?'; params.push(status); }
     if (device_id) { sql += ' AND t.device_id=?'; params.push(device_id); }
+    if (from) { sql += ' AND t.started_at >= ?'; params.push(from + ' 00:00:00'); }
+    if (to) { sql += ' AND t.started_at <= ?'; params.push(to + ' 23:59:59'); }
     if (cf.sql) { sql += cf.sql.replace('company_id', 'd.company_id'); params.push(...cf.params); }
-    sql += ' ORDER BY t.started_at DESC LIMIT 100';
+    sql += ' ORDER BY FIELD(t.status, "active", "completed", "cancelled"), t.started_at DESC LIMIT 200';
     res.json(await conn.query(sql, params));
   } catch (err) { res.status(500).json({ error: 'Error interno' }); }
   finally { if (conn) conn.release(); }

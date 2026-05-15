@@ -567,30 +567,58 @@ async function filterMapByDevice() {
 
 async function loadTrips() {
   var status = document.getElementById('trip-filter').value;
-  var res = await af(API_BASE + '/api/trips?status=' + status);
+  var from = document.getElementById('trip-date-from').value;
+  var to = document.getElementById('trip-date-to').value;
+  var url = API_BASE + '/api/trips?status=' + status;
+  if (from) url += '&from=' + from;
+  if (to) url += '&to=' + to;
+  var res = await af(url);
   var trips = await res.json();
   var list = document.getElementById('trips-list');
   list.innerHTML = '';
   if (!trips.length) { list.innerHTML = '<div class="empty">No hay viajes</div>'; return; }
+
+  // Separar por estado
+  var active = trips.filter(function(t) { return t.status === 'active'; });
+  var completed = trips.filter(function(t) { return t.status === 'completed'; });
+  var cancelled = trips.filter(function(t) { return t.status === 'cancelled'; });
+
+  if (active.length && !status) {
+    list.innerHTML += '<h3 style="margin:1rem 0 0.5rem;font-size:0.9rem;color:#16a34a;">🟢 En progreso (' + active.length + ')</h3>';
+    active.forEach(function(t) { list.innerHTML += renderTripCard(t); });
+  }
+  if (completed.length && !status) {
+    list.innerHTML += '<h3 style="margin:1.5rem 0 0.5rem;font-size:0.9rem;color:#666;">✅ Cerrados (' + completed.length + ')</h3>';
+    completed.forEach(function(t) { list.innerHTML += renderTripCard(t); });
+  }
+  if (cancelled.length && !status) {
+    list.innerHTML += '<h3 style="margin:1.5rem 0 0.5rem;font-size:0.9rem;color:#999;">❌ Cancelados (' + cancelled.length + ')</h3>';
+    cancelled.forEach(function(t) { list.innerHTML += renderTripCard(t); });
+  }
+  // Si hay filtro de estado, mostrar sin agrupar
+  if (status) {
+    trips.forEach(function(t) { list.innerHTML += renderTripCard(t); });
+  }
+}
+
+function renderTripCard(t) {
   var statusLabels = { active: '🟢 Activo', completed: '✅ Completado', cancelled: '❌ Cancelado' };
   var statusBadges = { active: 'badge-active', completed: 'badge-completed', cancelled: 'badge-cancelled' };
-  trips.forEach(function(t) {
-    list.innerHTML += '<div class="trip-card">' +
-      '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.5rem;">' +
-        '<div><div class="card-title">' + esc(t.person_name || t.device_name) + ' <span class="card-badge ' + (statusBadges[t.status]||'') + '">' + (statusLabels[t.status]||t.status) + '</span></div>' +
-        (t.vehicle ? '<div class="card-meta">🚗 ' + esc(t.vehicle) + '</div>' : '') +
-        (t.cargo ? '<div class="card-meta">📦 ' + esc(t.cargo) + '</div>' : '') + '</div>' +
-        '<div style="text-align:right;"><div style="font-size:1.1rem;font-weight:700;">$' + parseFloat(t.total_cost||0).toLocaleString('es-MX',{minimumFractionDigits:2}) + '</div>' +
-        '<div class="card-meta">' + (t.location_count||0) + ' puntos</div></div>' +
-      '</div>' +
-      '<div class="trip-route"><span class="dot dot-start"></span><span style="font-size:0.85rem;">' + esc(t.origin) + '</span><span class="line"></span><span style="font-size:0.85rem;">' + esc(t.destination) + '</span><span class="dot dot-end"></span></div>' +
-      '<div class="card-meta">📅 ' + new Date(t.started_at).toLocaleDateString('es-MX',{weekday:'short',day:'numeric',month:'short',year:'numeric'}) + (t.completed_at ? ' → ' + new Date(t.completed_at).toLocaleDateString('es-MX',{day:'numeric',month:'short'}) : '') + '</div>' +
-      '<div class="card-actions">' +
-        '<button onclick="viewTrip(' + t.id + ')" class="btn btn-primary btn-sm">📋 Detalle</button>' +
-        '<button onclick="viewTripOnMap(' + t.id + ')" class="btn btn-accent2 btn-sm">🗺️ Mapa</button>' +
-        (t.status==='active' ? '<button onclick="completeTrip(' + t.id + ')" class="btn btn-success btn-sm">✅</button><button onclick="cancelTrip(' + t.id + ')" class="btn btn-secondary btn-sm">❌</button>' : '') +
-      '</div></div>';
-  });
+  return '<div class="trip-card">' +
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.5rem;">' +
+      '<div><div class="card-title">' + esc(t.person_name || t.device_name) + ' <span class="card-badge ' + (statusBadges[t.status]||'') + '">' + (statusLabels[t.status]||t.status) + '</span></div>' +
+      (t.vehicle ? '<div class="card-meta">🚗 ' + esc(t.vehicle) + '</div>' : '') +
+      (t.cargo ? '<div class="card-meta">📦 ' + esc(t.cargo) + '</div>' : '') + '</div>' +
+      '<div style="text-align:right;"><div style="font-size:1.1rem;font-weight:700;">$' + parseFloat(t.total_cost||0).toLocaleString('es-MX',{minimumFractionDigits:2}) + '</div>' +
+      '<div class="card-meta">' + (t.location_count||0) + ' puntos</div></div>' +
+    '</div>' +
+    '<div class="trip-route"><span class="dot dot-start"></span><span style="font-size:0.85rem;">' + esc(t.origin) + '</span><span class="line"></span><span style="font-size:0.85rem;">' + esc(t.destination) + '</span><span class="dot dot-end"></span></div>' +
+    '<div class="card-meta">📅 ' + new Date(t.started_at).toLocaleDateString('es-MX',{weekday:'short',day:'numeric',month:'short',year:'numeric'}) + (t.completed_at ? ' → ' + new Date(t.completed_at).toLocaleDateString('es-MX',{day:'numeric',month:'short'}) : '') + '</div>' +
+    '<div class="card-actions">' +
+      '<button onclick="viewTrip(' + t.id + ')" class="btn btn-primary btn-sm">📋 Detalle</button>' +
+      '<button onclick="viewTripOnMap(' + t.id + ')" class="btn btn-accent2 btn-sm">🗺️ Mapa</button>' +
+      (t.status==='active' ? '<button onclick="completeTrip(' + t.id + ')" class="btn btn-success btn-sm">✅</button><button onclick="cancelTrip(' + t.id + ')" class="btn btn-secondary btn-sm">❌</button>' : '') +
+    '</div></div>';
 }
 
 function showNewTripForm() {
