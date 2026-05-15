@@ -623,14 +623,47 @@ function renderTripCard(t) {
 
 function showNewTripForm() {
   var opts = allDevices.map(function(d) { return '<option value="' + d.id + '">' + esc(d.person_name || d.device_name) + ' - ' + esc(d.vehicle || d.device_name) + '</option>'; }).join('');
+  window._newTripDeliveries = [];
   showDetail(
     '<h3>➕ Nuevo viaje</h3>' +
     '<div class="form-group"><label>Conductor</label><select id="trip-device">' + opts + '</select></div>' +
     '<div class="form-row"><div class="form-group"><label>Origen</label><input id="trip-origin" placeholder="Ej: CDMX"></div><div class="form-group"><label>Destino</label><input id="trip-dest" placeholder="Ej: Guadalajara"></div></div>' +
     '<div class="form-group"><label>Carga</label><input id="trip-cargo" placeholder="Ej: 20 cajas"></div>' +
     '<div class="form-group"><label>Notas</label><textarea id="trip-notes" placeholder="Notas..."></textarea></div>' +
-    '<button onclick="createTrip()" class="btn btn-primary" style="width:100%;margin-top:0.5rem;">Crear viaje</button>'
+    '<div style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid #e0e0e0;">' +
+      '<div style="font-size:0.85rem;font-weight:600;margin-bottom:0.5rem;">📦 Entregas (opcional)</div>' +
+      '<div id="new-trip-deliveries"></div>' +
+      '<div style="display:flex;gap:0.5rem;margin-top:0.5rem;"><input id="new-del-name" placeholder="Cliente/Nombre" style="flex:1;padding:0.4rem;border:1px solid #e0e0e0;border-radius:6px;font-size:0.8rem;"><input id="new-del-address" placeholder="Dirección" style="flex:1;padding:0.4rem;border:1px solid #e0e0e0;border-radius:6px;font-size:0.8rem;"><button onclick="addNewTripDelivery()" class="btn btn-secondary btn-sm">+</button></div>' +
+    '</div>' +
+    '<button onclick="createTrip()" class="btn btn-primary" style="width:100%;margin-top:1rem;">Crear viaje</button>'
   );
+}
+
+function addNewTripDelivery() {
+  var name = document.getElementById('new-del-name').value.trim();
+  var address = document.getElementById('new-del-address').value.trim();
+  if (!name) return;
+  window._newTripDeliveries.push({ name: name, address: address });
+  document.getElementById('new-del-name').value = '';
+  document.getElementById('new-del-address').value = '';
+  renderNewTripDeliveries();
+}
+
+function removeNewTripDelivery(i) {
+  window._newTripDeliveries.splice(i, 1);
+  renderNewTripDeliveries();
+}
+
+function renderNewTripDeliveries() {
+  var container = document.getElementById('new-trip-deliveries');
+  if (!container) return;
+  var html = '';
+  window._newTripDeliveries.forEach(function(d, i) {
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:0.4rem;margin-bottom:0.3rem;background:#f9f9f9;border-radius:6px;font-size:0.8rem;">' +
+      '<span>📦 ' + esc(d.name) + (d.address ? ' — ' + esc(d.address) : '') + '</span>' +
+      '<button onclick="removeNewTripDelivery(' + i + ')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:1rem;">×</button></div>';
+  });
+  container.innerHTML = html;
 }
 
 async function createTrip() {
@@ -639,7 +672,18 @@ async function createTrip() {
     body: JSON.stringify({ device_id: document.getElementById('trip-device').value, origin: document.getElementById('trip-origin').value, destination: document.getElementById('trip-dest').value, cargo: document.getElementById('trip-cargo').value, notes: document.getElementById('trip-notes').value }),
   });
   var data = await res.json();
-  if (data.success) { closeDetailDirect(); updateStatus('Viaje creado', 'success'); loadTrips(); }
+  if (data.success) {
+    // Agregar entregas si hay
+    if (window._newTripDeliveries && window._newTripDeliveries.length) {
+      for (var i = 0; i < window._newTripDeliveries.length; i++) {
+        await af(API_BASE + '/api/trips/' + data.tripId + '/deliveries', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(window._newTripDeliveries[i]),
+        });
+      }
+    }
+    closeDetailDirect(); updateStatus('Viaje creado con ' + (window._newTripDeliveries.length || 0) + ' entregas', 'success'); loadTrips();
+  }
   else updateStatus('Error: ' + (data.error||''), 'error');
 }
 
