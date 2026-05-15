@@ -230,7 +230,9 @@ async function showRegistered() {
 
   loadMyTrip();
   loadUnreadCount();
+  loadChatUnread();
   setInterval(loadUnreadCount, 30000);
+  setInterval(loadChatUnread, 30000);
 
   // Mostrar botón de descarga según plataforma
   var dlCard = document.getElementById('download-app-card');
@@ -648,6 +650,105 @@ function urlBase64ToUint8Array(base64String) {
 
 async function saveDeviceIdToCache(id) {
   try { var cache = await caches.open('app-data'); await cache.put('/device-id', new Response(JSON.stringify({ deviceId: id }))); } catch(e){}
+}
+
+// ============ DRIVER CHAT ============
+
+var chatContacts = [];
+var chatCurrentContact = null;
+
+async function openDriverChat() {
+  var c = document.getElementById('driver-chat');
+  if (c.style.display === 'block' && !chatCurrentContact) { c.style.display = 'none'; return; }
+  c.style.display = 'block';
+  chatCurrentContact = null;
+  c.innerHTML = '<p style="color:#888;text-align:center;">Cargando...</p>';
+  try {
+    var res = await fetch(API_BASE + '/api/driver-chat/contacts/' + deviceId);
+    chatContacts = await res.json();
+    var unreadRes = await fetch(API_BASE + '/api/driver-chat/' + deviceId + '/unread');
+    var unread = await unreadRes.json();
+    var unreadMap = {};
+    unread.forEach(function(u) { unreadMap[u.from_device_id] = u.count; });
+
+    if (!chatContacts.length) {
+      c.innerHTML = '<div style="background:#fff;border:1px solid #e0e0e0;border-radius:12px;padding:1.5rem;text-align:center;color:#aaa;">Sin compañeros en tu empresa</div>';
+      return;
+    }
+    var html = '<div style="background:#fff;border:1px solid #e0e0e0;border-radius:12px;padding:1rem;"><h3 style="font-size:1rem;margin-bottom:0.75rem;">💬 Chat con compañeros</h3>';
+    chatContacts.forEach(function(ct) {
+      var badge = unreadMap[ct.id] ? '<span style="background:#3b82f6;color:#fff;font-size:0.7rem;padding:0.1rem 0.5rem;border-radius:10px;margin-left:0.5rem;">' + unreadMap[ct.id] + '</span>' : '';
+      html += '<div onclick="openConversation(' + ct.id + ')" style="display:flex;justify-content:space-between;align-items:center;padding:0.75rem;margin-bottom:0.5rem;background:#f9f9f9;border-radius:8px;cursor:pointer;">';
+      html += '<div><strong>' + escapeHtml(ct.person_name || ct.device_name) + '</strong>';
+      if (ct.vehicle) html += '<br><span style="font-size:0.75rem;color:#888;">🚗 ' + escapeHtml(ct.vehicle) + '</span>';
+      html += '</div><div>' + badge + ' →</div></div>';
+    });
+    html += '</div>';
+    c.innerHTML = html;
+  } catch(e) { c.innerHTML = '<p style="color:#ef4444;text-align:center;">Error cargando</p>'; }
+}
+
+async function openConversation(otherDeviceId) {
+  chatCurrentContact = otherDeviceId;
+  var ct = chatContacts.find(function(x) { return x.id === otherDeviceId; }) || {};
+  var c = document.getElementById('driver-chat');
+  c.innerHTML = '<p style="color:#888;text-align:center;">Cargando...</p>';
+  try {
+    var res = await fetch(API_BASE + '/api/driver-chat/' + deviceId + '/' + otherDeviceId);
+    var messages = await res.json();
+    var html = '<div style="background:#fff;border:1px solid #e0e0e0;border-radius:12px;padding:1rem;">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;"><button onclick="openDriverChat()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;">←</button><strong>' + escapeHtml(ct.person_name || ct.device_name) + '</strong><span></span></div>';
+    html += '<div id="chat-messages" style="max-height:300px;overflow-y:auto;margin-bottom:0.75rem;padding:0.5rem;background:#f5f5f5;border-radius:8px;">';
+    if (!messages.length) {
+      html += '<p style="text-align:center;color:#aaa;font-size:0.85rem;">Sin mensajes aún</p>';
+    } else {
+      messages.forEach(function(m) {
+        var isMine = m.from_device_id == deviceId;
+        var align = isMine ? 'flex-end' : 'flex-start';
+        var bg = isMine ? '#dcfce7' : '#e0e7ff';
+        var time = new Date(m.created_at).toLocaleTimeString('es-MX', {hour:'2-digit',minute:'2-digit'});
+        html += '<div style="display:flex;justify-content:' + align + ';margin-bottom:0.4rem;">';
+        html += '<div style="max-width:80%;padding:0.5rem 0.75rem;background:' + bg + ';border-radius:12px;font-size:0.85rem;">';
+        html += escapeHtml(m.body) + '<div style="font-size:0.65rem;color:#999;margin-top:0.2rem;">' + time + '</div>';
+        html += '</div></div>';
+      });
+    }
+    html += '</div>';
+    html += '<div style="display:flex;gap:0.4rem;"><input type="text" id="chat-input" placeholder="Escribe..." style="flex:1;padding:0.5rem 0.75rem;border:1px solid #e0e0e0;border-radius:8px;font-size:0.85rem;" onkeydown="if(event.key===\'Enter\')sendDriverMsg(' + otherDeviceId + ')"><button onclick="sendDriverMsg(' + otherDeviceId + ')" style="padding:0.5rem 1rem;background:#22c55e;color:#fff;border:none;border-radius:8px;font-weight:600;cursor:pointer;">Enviar</button></div>';
+    html += '</div>';
+    c.innerHTML = html;
+    // Scroll al final
+    var msgDiv = document.getElementById('chat-messages');
+    if (msgDiv) msgDiv.scrollTop = msgDiv.scrollHeight;
+  } catch(e) { c.innerHTML = '<p style="color:#ef4444;">Error</p>'; }
+}
+
+async function sendDriverMsg(otherDeviceId) {
+  var input = document.getElementById('chat-input');
+  var body = input ? input.value.trim() : '';
+  if (!body) return;
+  input.value = '';
+  try {
+    await fetch(API_BASE + '/api/driver-chat/' + deviceId + '/' + otherDeviceId, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body: body }),
+    });
+    openConversation(otherDeviceId);
+  } catch(e) { updateStatus('Error enviando', 'error'); }
+}
+
+async function loadChatUnread() {
+  if (!deviceId) return;
+  try {
+    var res = await fetch(API_BASE + '/api/driver-chat/' + deviceId + '/unread');
+    var data = await res.json();
+    var total = data.reduce(function(sum, u) { return sum + u.count; }, 0);
+    var badge = document.getElementById('chat-badge');
+    if (badge) {
+      if (total > 0) { badge.textContent = total; badge.style.display = 'inline'; }
+      else { badge.style.display = 'none'; }
+    }
+  } catch(e) {}
 }
 
 document.addEventListener('DOMContentLoaded', init);

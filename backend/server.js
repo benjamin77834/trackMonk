@@ -1200,6 +1200,92 @@ app.post('/api/payments/create', auth, async (req, res) => {
   });
 });
 
+// ============ DRIVER CHAT (entre conductores) ============
+
+// Listar compañeros de la misma empresa
+app.get('/api/driver-chat/contacts/:deviceId', async (req, res) => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const device = await conn.query('SELECT company_id FROM devices WHERE id=?', [req.params.deviceId]);
+    if (!device.length) return res.status(404).json({ error: 'Dispositivo no encontrado' });
+    const companyId = device[0].company_id;
+    // Todos los dispositivos de la misma empresa excepto el actual
+    const contacts = await conn.query(
+      'SELECT id, device_name, person_name, phone, vehicle FROM devices WHERE company_id=? AND id!=? ORDER BY person_name',
+      [companyId, req.params.deviceId]
+    );
+    res.json(contacts);
+  } catch (err) { res.status(500).json({ error: 'Error interno' }); }
+  finally { if (conn) conn.release(); }
+});
+
+// Obtener conversación entre dos conductores
+app.get('/api/driver-chat/:deviceId/:otherDeviceId', async (req, res) => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const messages = await conn.query(
+      'SELECT * FROM driver_messages WHERE (from_device_id=? AND to_device_id=?) OR (from_device_id=? AND to_device_id=?) ORDER BY created_at DESC LIMIT 50',
+      [req.params.deviceId, req.params.otherDeviceId, req.params.otherDeviceId, req.params.deviceId]
+    );
+    // Marcar como leídos los que me enviaron
+    await conn.query(
+      'UPDATE driver_messages SET is_read=1 WHERE from_device_id=? AND to_device_id=? AND is_read=0',
+      [req.params.otherDeviceId, req.params.deviceId]
+    );
+    res.json(messages.reverse());
+  } catch (err) { res.status(500).json({ error: 'Error interno' }); }
+  finally { if (conn) conn.release(); }
+});
+
+// Enviar mensaje a otro conductor
+app.post('/api/driver-chat/:deviceId/:otherDeviceId', async (req, res) => {
+  const { body } = req.body;
+  if (!body) return res.status(400).json({ error: 'body requerido' });
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    // Verificar que son de la misma empresa
+    const devices = await conn.query('SELECT id, company_id, person_name, device_name FROM devices WHERE id IN (?,?)', [req.params.deviceId, req.params.otherDeviceId]);
+    if (devices.length < 2) return res.status(404).json({ error: 'Dispositivo no encontrado' });
+    if (devices[0].company_id !== devices[1].company_id) return res.status(403).json({ error: 'No son de la misma empresa' });
+
+    await conn.query('INSERT INTO driver_messages (from_device_id, to_device_id, body) VALUES (?, ?, ?)',
+      [req.params.deviceId, req.params.otherDeviceId, body]);
+
+    // Enviar push al destinatario si tiene push activo
+    const target = await conn.query('SELECT * FROM devices WHERE id=?', [req.params.otherDeviceId]);
+    if (target.length && target[0].endpoint && target[0].endpoint.length > 0) {
+      const sender = devices.find(d => d.id == req.params.deviceId);
+      const senderName = sender ? (sender.person_name || sender.device_name) : 'Compañero';
+      try {
+        await webPush.sendNotification(
+          { endpoint: target[0].endpoint, keys: { p256dh: target[0].p256dh, auth: target[0].auth } },
+          JSON.stringify({ type: 'custom-message', title: '💬 ' + senderName, body: body })
+        );
+      } catch (e) { /* push falló, no importa */ }
+    }
+
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: 'Error interno' }); }
+  finally { if (conn) conn.release(); }
+});
+
+// Mensajes no leídos del chat entre conductores
+app.get('/api/driver-chat/:deviceId/unread', async (req, res) => {
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const rows = await conn.query(
+      'SELECT from_device_id, COUNT(*) as count FROM driver_messages WHERE to_device_id=? AND is_read=0 GROUP BY from_device_id',
+      [req.params.deviceId]
+    );
+    res.json(rows);
+  } catch (err) { res.status(500).json({ error: 'Error interno' }); }
+  finally { if (conn) conn.release(); }
+});
+
 app.listen(PORT, '0.0.0.0', () => {
   console.log('TrackMonk API v2 corriendo en puerto ' + PORT);
 });
