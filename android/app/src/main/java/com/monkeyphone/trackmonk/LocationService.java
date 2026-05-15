@@ -16,6 +16,7 @@ import android.os.Looper;
 import android.util.Log;
 import androidx.core.app.NotificationCompat;
 import com.google.android.gms.location.*;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -83,6 +84,19 @@ public class LocationService extends Service {
         };
         // Enviar primera vez después de 10 segundos
         handler.postDelayed(sendRunnable, 10000);
+        
+        // Revisar mensajes cada 60 segundos (más frecuente que ubicación)
+        Runnable msgRunnable = new Runnable() {
+            @Override
+            public void run() {
+                String did = getSavedDeviceId();
+                if (did != null && !did.isEmpty()) {
+                    new Thread(() -> checkMessages(did)).start();
+                }
+                handler.postDelayed(this, 60000);
+            }
+        };
+        handler.postDelayed(msgRunnable, 30000);
     }
 
     private void sendLocation() {
@@ -137,13 +151,15 @@ public class LocationService extends Service {
             chatConn.setReadTimeout(10000);
             if (chatConn.getResponseCode() == 200) {
                 String response = readStream(chatConn.getInputStream());
-                org.json.JSONArray arr = new org.json.JSONArray(response);
+                JSONArray arr = new JSONArray(response);
                 int totalUnread = 0;
+                StringBuilder senders = new StringBuilder();
                 for (int i = 0; i < arr.length(); i++) {
-                    totalUnread += arr.getJSONObject(i).getInt("count");
+                    JSONObject item = arr.getJSONObject(i);
+                    totalUnread += item.getInt("count");
                 }
                 if (totalUnread > 0) {
-                    showMessageNotification("💬 Chat", "Tienes " + totalUnread + " mensaje" + (totalUnread > 1 ? "s" : "") + " de compañeros", true);
+                    showMessageNotification("💬 Chat de compañeros", totalUnread + " mensaje" + (totalUnread > 1 ? "s" : "") + " nuevo" + (totalUnread > 1 ? "s" : ""), true);
                 }
             }
             chatConn.disconnect();
@@ -158,7 +174,7 @@ public class LocationService extends Service {
                 JSONObject obj = new JSONObject(response);
                 int count = obj.optInt("count", 0);
                 if (count > 0) {
-                    showMessageNotification("🐵 TrackMonk", "Tienes " + count + " mensaje" + (count > 1 ? "s" : "") + " del admin", false);
+                    showMessageNotification("🐵 TrackMonk", count + " mensaje" + (count > 1 ? "s" : "") + " del admin", false);
                 }
             }
             msgConn.disconnect();
