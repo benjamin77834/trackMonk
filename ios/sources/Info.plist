@@ -8,6 +8,10 @@
     <string>TrackMonk necesita tu ubicación para tracking GPS.</string>
     <key>NSLocationAlwaysUsageDescription</key>
     <string>TrackMonk necesita ubicación en segundo plano para tracking continuo.</string>
+    <key>NSCameraUsageDescription</key>
+    <string>TrackMonk necesita la cámara para tomar fotos de evidencia de viajes.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>TrackMonk necesita acceso a fotos para subir evidencia de viajes.</string>
     <key>UIBackgroundModes</key>
     <array>
         <string>location</string>
