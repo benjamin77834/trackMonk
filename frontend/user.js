@@ -882,7 +882,7 @@ async function openConversation(otherDeviceId) {
     var messages = await res.json();
     var html = '<div style="background:#fff;border:1px solid #e0e0e0;border-radius:12px;padding:1rem;">';
     html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;"><button onclick="openDriverChat()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;">←</button><strong>' + escapeHtml(ct.person_name || ct.device_name) + '</strong><span></span></div>';
-    html += '<div id="chat-messages" style="max-height:300px;overflow-y:auto;margin-bottom:0.75rem;padding:0.5rem;background:#f5f5f5;border-radius:8px;">';
+    html += '<div id="chat-messages" style="max-height:60vh;overflow-y:auto;margin-bottom:0.75rem;padding:0.5rem;background:#f5f5f5;border-radius:8px;">';
     if (!messages.length) {
       html += '<p style="text-align:center;color:#aaa;font-size:0.85rem;">Sin mensajes aún</p>';
     } else {

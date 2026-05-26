@@ -621,7 +621,7 @@ struct DriverChatSection: View {
                             }
                         }
                     }
-                    .frame(maxHeight: 200)
+                    .frame(maxHeight: 400)
                     .background(Color(.systemGray6))
                     .cornerRadius(8)
                     

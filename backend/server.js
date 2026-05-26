@@ -1274,7 +1274,7 @@ app.get('/api/driver-chat/:deviceId/:otherDeviceId', async (req, res) => {
   try {
     conn = await pool.getConnection();
     const messages = await conn.query(
-      'SELECT * FROM driver_messages WHERE (from_device_id=? AND to_device_id=?) OR (from_device_id=? AND to_device_id=?) ORDER BY created_at DESC LIMIT 50',
+      'SELECT * FROM driver_messages WHERE (from_device_id=? AND to_device_id=?) OR (from_device_id=? AND to_device_id=?) ORDER BY created_at DESC LIMIT 100',
       [req.params.deviceId, req.params.otherDeviceId, req.params.otherDeviceId, req.params.deviceId]
     );
     // Marcar como leídos los que me enviaron
